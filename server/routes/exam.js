@@ -6,9 +6,9 @@ const { generateFromTemplate } = require('../services/templateExporter');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-router.post('/export', express.json({ limit: '10mb' }), async (req, res) => {
+router.post('/export', async (req, res) => {
   try {
-    const { config, questions, format, signatureImage, templateFile } = req.body;
+    const { config, questions, format, templateFile } = req.body;
 
     if (!config || !questions) {
       return res.status(400).json({ error: 'Missing config or questions' });
@@ -23,12 +23,7 @@ router.post('/export', express.json({ limit: '10mb' }), async (req, res) => {
       buffer = await generateFromTemplate(templateBuffer, questions);
     } else {
       // Default export: generate from scratch
-      let signatureImageBuffer = null;
-      if (signatureImage) {
-        const base64Data = signatureImage.replace(/^data:image\/\w+;base64,/, '');
-        signatureImageBuffer = Buffer.from(base64Data, 'base64');
-      }
-      buffer = await generateDocxBuffer({ config, questions, signatureImageBuffer });
+      buffer = await generateDocxBuffer({ config, questions });
     }
 
     const filename = `${config.courseCode || 'Exam'}_${config.examType || 'Exam'}.docx`;

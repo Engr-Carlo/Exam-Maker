@@ -5,21 +5,10 @@ import { useNavigate } from 'react-router-dom'
 export default function ExamConfig() {
   const { config, setConfig } = useExam()
   const navigate = useNavigate()
-  const sigInputRef = useRef(null)
   const templateInputRef = useRef(null)
 
   const update = (field, value) => {
     setConfig((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSignatureUpload = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      update('signatureImage', ev.target.result)
-    }
-    reader.readAsDataURL(file)
   }
 
   const handleTemplateUpload = (e) => {
@@ -164,44 +153,6 @@ export default function ExamConfig() {
           />
         </div>
 
-        {/* Signature image upload */}
-        <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Signature (Footer)</h3>
-          <p className="text-xs text-gray-500 mb-2">Upload your signature image. It will appear in the "Prepared by" section of the document footer.</p>
-          <input
-            ref={sigInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/jpg"
-            onChange={handleSignatureUpload}
-            className="hidden"
-          />
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => sigInputRef.current?.click()}
-              className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl font-medium transition"
-            >
-              {config.signatureImage ? 'Change Signature' : 'Upload Signature'}
-            </button>
-            {config.signatureImage && (
-              <>
-                <img
-                  src={config.signatureImage}
-                  alt="Signature preview"
-                  className="h-12 border border-gray-200 rounded-lg bg-white p-1"
-                />
-                <button
-                  type="button"
-                  onClick={() => update('signatureImage', null)}
-                  className="text-xs text-red-500 hover:text-red-700 font-medium"
-                >
-                  Remove
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
         {/* Template upload */}
         <div>
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Exam Template (Optional)</h3>
@@ -241,7 +192,7 @@ export default function ExamConfig() {
           </div>
           {config.templateFile && (
             <div className="mt-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-xs text-blue-700">
-              <strong>Template mode active.</strong> The export will use your uploaded template instead of the default format. Signature, university details, and instructions from above will be ignored — they should already be in your template.
+              <strong>Template mode active.</strong> The export will use your uploaded template instead of the default format. University details and instructions above will be ignored — they should already be in your template.
             </div>
           )}
         </div>
@@ -249,7 +200,6 @@ export default function ExamConfig() {
         {/* Instructions */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Exam Instructions</label>
-          <p className="text-xs text-gray-400 mb-2">These instructions are only used when exporting <strong>without</strong> a template.</p>
           <textarea
             rows={5}
             value={config.instructions}

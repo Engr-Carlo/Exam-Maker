@@ -1,9 +1,9 @@
 const {
   Document, Packer, Paragraph, TextRun, ImageRun,
   Table, TableRow, TableCell, WidthType, AlignmentType,
-  BorderStyle, Header, Footer, PageNumber, NumberFormat,
-  SectionType, convertInchesToTwip, HeadingLevel,
-  VerticalAlign, TableLayoutType, PageBreak,
+  BorderStyle, Footer,
+  SectionType, convertInchesToTwip,
+  TableLayoutType,
 } = require('docx');
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +13,7 @@ const FONT = 'Arial';
 const FONT_SIZE = 20; // half-points (20 = 10pt)
 const FONT_SIZE_SMALL = 18; // 9pt for signature area
 
-function buildExamDoc({ config, questions, signatureImageBuffer }) {
+function buildExamDoc({ config, questions }) {
   const headerImageBuffer = fs.existsSync(HEADER_IMAGE_PATH)
     ? fs.readFileSync(HEADER_IMAGE_PATH)
     : null;
@@ -124,7 +124,7 @@ function buildExamDoc({ config, questions, signatureImageBuffer }) {
   headerParagraphs.push(new Paragraph({ spacing: { after: 200 }, children: [] }));
 
   // -- Build signature footer --
-  const signatureFooter = buildSignatureFooter(signatureImageBuffer);
+  const signatureFooter = buildSignatureFooter();
 
   // -- Assemble pages --
   const ITEMS_PER_PAGE = 16;
@@ -288,7 +288,7 @@ function buildQuestionParagraphs(questions, startNum = 1) {
   return paragraphs;
 }
 
-function buildSignatureFooter(signatureImageBuffer) {
+function buildSignatureFooter() {
   const roles = [
     { label: 'Prepared by:', title: 'Faculty' },
     { label: 'Reviewed by:', title: 'Department Chair' },
@@ -319,26 +319,10 @@ function buildSignatureFooter(signatureImageBuffer) {
     ),
   });
 
-  // Row 2: Signature lines (with optional uploaded signature image)
-  const signatureCells = roles.map((r, idx) => {
+  // Row 2: Signature lines
+  const signatureCells = roles.map((r) => {
     const cellChildren = [];
-    if (idx === 0 && signatureImageBuffer) {
-      cellChildren.push(
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { before: 60 },
-          children: [
-            new ImageRun({
-              data: signatureImageBuffer,
-              transformation: { width: 120, height: 50 },
-              type: 'png',
-            }),
-          ],
-        })
-      );
-    } else {
-      cellChildren.push(new Paragraph({ spacing: { before: 400 }, children: [] }));
-    }
+    cellChildren.push(new Paragraph({ spacing: { before: 400 }, children: [] }));
     cellChildren.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
