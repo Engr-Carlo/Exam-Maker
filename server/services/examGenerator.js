@@ -247,6 +247,16 @@ function buildExamDoc({ config, questions }) {
   }
 
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: FONT,
+            size: FONT_SIZE,
+          },
+        },
+      },
+    },
     sections: pages,
   });
 
@@ -261,10 +271,11 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
     const num = startNum + i;
     const choices = ['A', 'B', 'C', 'D'];
 
-    // Question text — small gap before each question for readability
+    // Question text — hanging indent so wrapped text aligns with choices
     paragraphs.push(
       new Paragraph({
         spacing: { before: 80, after: 20 },
+        indent: { left: convertInchesToTwip(0.25), hanging: convertInchesToTwip(0.25) },
         children: [
           new TextRun({ text: `${num}. `, bold: false, size: fontSize, font }),
           new TextRun({ text: q.questionText, size: fontSize, font }),
