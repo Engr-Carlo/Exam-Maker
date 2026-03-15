@@ -14,14 +14,22 @@ export default function ReviewExport() {
     setExporting(true)
     setError('')
     try {
+      const payload = {
+        config,
+        questions,
+        format: 'docx',
+      }
+
+      // If template is uploaded, send it; otherwise send signature for default export
+      if (config.templateFile) {
+        payload.templateFile = config.templateFile
+      } else {
+        payload.signatureImage = config.signatureImage || null
+      }
+
       const res = await axios.post(
         '/api/exam/export',
-        {
-          config,
-          questions,
-          format: 'docx',
-          signatureImage: config.signatureImage || null,
-        },
+        payload,
         { responseType: 'blob' }
       )
 
@@ -119,6 +127,12 @@ export default function ReviewExport() {
           {/* Export section */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h2 className="font-bold text-lg text-gray-900 mb-4">Export</h2>
+
+            {config.templateFile && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-800 flex items-center gap-2">
+                📄 <strong>Template mode:</strong>&nbsp;Exporting with <em>{config.templateFileName}</em>
+              </div>
+            )}
 
             {tos && !isCompliant && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">

@@ -6,6 +6,7 @@ export default function ExamConfig() {
   const { config, setConfig } = useExam()
   const navigate = useNavigate()
   const sigInputRef = useRef(null)
+  const templateInputRef = useRef(null)
 
   const update = (field, value) => {
     setConfig((prev) => ({ ...prev, [field]: value }))
@@ -19,6 +20,29 @@ export default function ExamConfig() {
       update('signatureImage', ev.target.result)
     }
     reader.readAsDataURL(file)
+  }
+
+  const handleTemplateUpload = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      setConfig((prev) => ({
+        ...prev,
+        templateFile: ev.target.result,
+        templateFileName: file.name,
+      }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const removeTemplate = () => {
+    setConfig((prev) => ({
+      ...prev,
+      templateFile: null,
+      templateFileName: null,
+    }))
+    if (templateInputRef.current) templateInputRef.current.value = ''
   }
 
   return (
@@ -178,9 +202,54 @@ export default function ExamConfig() {
           </div>
         </div>
 
+        {/* Template upload */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Exam Template (Optional)</h3>
+          <p className="text-xs text-gray-500 mb-2">
+            Upload a <strong>.docx</strong> template with the placeholder <code className="bg-gray-100 px-1.5 py-0.5 rounded text-green-700 font-mono text-[11px]">{'{{QUESTIONS}}'}</code> where exam items should be inserted. The system will keep your template's format and inject the questions at the placeholder location.
+          </p>
+          <input
+            ref={templateInputRef}
+            type="file"
+            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={handleTemplateUpload}
+            className="hidden"
+          />
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => templateInputRef.current?.click()}
+              className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl font-medium transition"
+            >
+              {config.templateFile ? 'Change Template' : 'Upload Template'}
+            </button>
+            {config.templateFile && (
+              <>
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-1.5">
+                  <span className="text-green-700 text-sm">📄</span>
+                  <span className="text-sm text-green-800 font-medium">{config.templateFileName}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={removeTemplate}
+                  className="text-xs text-red-500 hover:text-red-700 font-medium"
+                >
+                  Remove
+                </button>
+              </>
+            )}
+          </div>
+          {config.templateFile && (
+            <div className="mt-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-xs text-blue-700">
+              <strong>Template mode active.</strong> The export will use your uploaded template instead of the default format. Signature, university details, and instructions from above will be ignored — they should already be in your template.
+            </div>
+          )}
+        </div>
+
         {/* Instructions */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Exam Instructions</label>
+          <p className="text-xs text-gray-400 mb-2">These instructions are only used when exporting <strong>without</strong> a template.</p>
           <textarea
             rows={5}
             value={config.instructions}
