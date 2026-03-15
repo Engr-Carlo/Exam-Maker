@@ -153,37 +153,6 @@ export default function ExamConfig() {
           />
         </div>
 
-        {/* Font settings */}
-        <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Document Font</h3>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Font</label>
-              <select
-                value={config.font || 'Arial'}
-                onChange={(e) => update('font', e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition"
-              >
-                <option value="Arial">Arial</option>
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Calibri">Calibri</option>
-              </select>
-            </div>
-            <div className="w-32">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Font Size</label>
-              <select
-                value={config.fontSize || 10}
-                onChange={(e) => update('fontSize', Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition"
-              >
-                {[9, 10, 11, 12].map(s => (
-                  <option key={s} value={s}>{s}pt</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
         {/* Template upload */}
         <div>
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Exam Template (Optional)</h3>

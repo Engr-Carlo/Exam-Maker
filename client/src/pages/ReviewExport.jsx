@@ -26,8 +26,6 @@ export default function ReviewExport() {
         examType: config.examType,
         instructorName: config.instructorName,
         instructions: config.instructions,
-        font: config.font || 'Arial',
-        fontSize: config.fontSize || 10,
       }
 
       const payload = {

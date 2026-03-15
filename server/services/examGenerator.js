@@ -24,8 +24,8 @@ const DEFAULT_FONT_SIZE = 20; // half-points (20 = 10pt)
 const FONT_SIZE_SMALL = 18; // 9pt for signature area
 
 function buildExamDoc({ config, questions }) {
-  const FONT = config.font || DEFAULT_FONT;
-  const FONT_SIZE = (config.fontSize || 10) * 2; // convert pt to half-points
+  const FONT = DEFAULT_FONT;
+  const FONT_SIZE = DEFAULT_FONT_SIZE;
   const headerImageBuffer = HEADER_IMAGE_BUFFER;
 
   // -- Build header image paragraph --
