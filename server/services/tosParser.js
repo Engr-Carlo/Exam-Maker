@@ -1,7 +1,10 @@
 const XLSX = require('xlsx');
 
 function parseTOS(filePath) {
-  const workbook = XLSX.readFile(filePath);
+  // Accept either a file path string (local dev) or a Buffer (Vercel memory storage)
+  const workbook = Buffer.isBuffer(filePath)
+    ? XLSX.read(filePath, { type: 'buffer' })
+    : XLSX.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });

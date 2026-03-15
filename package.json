@@ -8,6 +8,13 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install"
   },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "docx": "^8.5.0",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "xlsx": "^0.18.5"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
