@@ -24,8 +24,10 @@ function buildQuestionsXml(questions) {
 
     // Question paragraph: number hangs at margin, wrapped text aligns with choices
     xml +=
-      `<w:p><w:pPr><w:spacing w:before="80" w:after="20"/><w:ind w:left="432" w:hanging="432"/></w:pPr>` +
-      `<w:r>${FONT_RPR}<w:t xml:space="preserve">${escapeXml(`${num}. ${q.questionText}`)}</w:t></w:r></w:p>`;
+      `<w:p><w:pPr><w:spacing w:before="80" w:after="20"/><w:jc w:val="both"/><w:tabs><w:tab w:val="left" w:pos="432"/></w:tabs><w:ind w:left="432" w:hanging="432"/></w:pPr>` +
+      `<w:r>${FONT_RPR}<w:t xml:space="preserve">${escapeXml(`${num}.`)}</w:t></w:r>` +
+      `<w:r>${FONT_RPR}<w:tab/></w:r>` +
+      `<w:r>${FONT_RPR}<w:t xml:space="preserve">${escapeXml(q.questionText || '')}</w:t></w:r></w:p>`;
 
     // Choice paragraphs: same left indent as question text
     for (const letter of ['A', 'B', 'C', 'D']) {
@@ -35,7 +37,7 @@ function buildQuestionsXml(questions) {
       const isLast = letter === 'D';
 
       xml +=
-        `<w:p><w:pPr><w:spacing w:after="${isLast ? '80' : '0'}"/><w:ind w:left="432"/></w:pPr>` +
+        `<w:p><w:pPr><w:spacing w:after="${isLast ? '240' : '0'}"/><w:jc w:val="both"/><w:ind w:left="432"/></w:pPr>` +
         `<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(`${letter}) ${choiceText}`)}</w:t></w:r></w:p>`;
     }
   }

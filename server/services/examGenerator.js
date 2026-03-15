@@ -3,6 +3,7 @@ const {
   Table, TableRow, TableCell, WidthType, AlignmentType,
   BorderStyle, Footer,
   SectionType, convertInchesToTwip,
+  TabStopType,
   TableLayoutType,
 } = require('docx');
 const fs = require('fs');
@@ -287,8 +288,11 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
       new Paragraph({
         spacing: { before: 80, after: 20 },
         indent: { left: INDENT, hanging: INDENT },
+        alignment: AlignmentType.JUSTIFIED,
+        tabStops: [{ type: TabStopType.LEFT, position: INDENT }],
         children: [
-          new TextRun({ text: `${num}. `, bold: false, size: fontSize, font }),
+          new TextRun({ text: `${num}.`, bold: false, size: fontSize, font }),
+          new TextRun({ tab: true }),
           new TextRun({ text: q.questionText, size: fontSize, font }),
         ],
       })
@@ -326,8 +330,9 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
 
       paragraphs.push(
         new Paragraph({
-          spacing: { after: isLast ? 80 : 0 },
+          spacing: { after: isLast ? 240 : 0 },
           indent: { left: INDENT },
+          alignment: AlignmentType.JUSTIFIED,
           children: [
             new TextRun({
               text: `${letter}) ${choiceText}`,
