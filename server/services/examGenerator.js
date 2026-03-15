@@ -9,8 +9,11 @@ const fs = require('fs');
 const path = require('path');
 
 const HEADER_IMAGE_PATH = path.join(__dirname, '..', 'assets', 'header.png');
+const FONT = 'Arial';
+const FONT_SIZE = 20; // half-points (20 = 10pt)
+const FONT_SIZE_SMALL = 18; // 9pt for signature area
 
-function buildExamDoc({ config, questions }) {
+function buildExamDoc({ config, questions, signatureImageBuffer }) {
   const headerImageBuffer = fs.existsSync(HEADER_IMAGE_PATH)
     ? fs.readFileSync(HEADER_IMAGE_PATH)
     : null;
@@ -42,16 +45,18 @@ function buildExamDoc({ config, questions }) {
       new TextRun({
         text: isChecked ? '☑ ' : '☐ ',
         bold: true,
-        size: 22,
+        size: FONT_SIZE + 2,
+        font: FONT,
       }),
       new TextRun({
         text: `${examTypes[i]} Examination`,
         bold: true,
-        size: 22,
+        size: FONT_SIZE + 2,
+        font: FONT,
       })
     );
     if (i < examTypes.length - 1) {
-      examTypeRuns.push(new TextRun({ text: '          ', size: 22 }));
+      examTypeRuns.push(new TextRun({ text: '          ', size: FONT_SIZE + 2, font: FONT }));
     }
   }
 
@@ -69,14 +74,14 @@ function buildExamDoc({ config, questions }) {
       alignment: AlignmentType.CENTER,
       spacing: { after: 20 },
       children: [
-        new TextRun({ text: `${config.courseCode || 'CPE101'} – ${config.courseTitle || 'Machine Learning'}`, bold: true, italics: true, size: 22 }),
+        new TextRun({ text: `${config.courseCode || 'CPE101'} – ${config.courseTitle || 'Machine Learning'}`, bold: true, italics: true, size: FONT_SIZE + 2, font: FONT }),
       ],
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 200 },
       children: [
-        new TextRun({ text: `${config.semester || '2nd'}  Semester, AY  ${config.academicYear || '2025-2026'}`, size: 22 }),
+        new TextRun({ text: `${config.semester || '2nd'}  Semester, AY  ${config.academicYear || '2025-2026'}`, size: FONT_SIZE, font: FONT }),
       ],
     })
   );
@@ -86,16 +91,16 @@ function buildExamDoc({ config, questions }) {
     new Paragraph({
       spacing: { after: 40 },
       children: [
-        new TextRun({ text: 'STUDENT NAME: ______________________________     ', bold: true, size: 20 }),
-        new TextRun({ text: 'DATE: __________     ', bold: true, size: 20 }),
-        new TextRun({ text: 'SCORE: ________', bold: true, size: 20 }),
+        new TextRun({ text: 'STUDENT NAME: ______________________________     ', bold: true, size: FONT_SIZE, font: FONT }),
+        new TextRun({ text: 'DATE: __________     ', bold: true, size: FONT_SIZE, font: FONT }),
+        new TextRun({ text: 'SCORE: ________', bold: true, size: FONT_SIZE, font: FONT }),
       ],
     }),
     new Paragraph({
       spacing: { after: 200 },
       children: [
-        new TextRun({ text: 'YEAR AND SECTION: __________________________     ', bold: true, size: 20 }),
-        new TextRun({ text: 'INSTRUCTOR: ________________________', bold: true, size: 20 }),
+        new TextRun({ text: 'YEAR AND SECTION: __________________________     ', bold: true, size: FONT_SIZE, font: FONT }),
+        new TextRun({ text: 'INSTRUCTOR: ________________________', bold: true, size: FONT_SIZE, font: FONT }),
       ],
     })
   );
@@ -110,7 +115,7 @@ function buildExamDoc({ config, questions }) {
       new Paragraph({
         spacing: { after: 40 },
         children: [
-          new TextRun({ text: line, bold: true, size: 20 }),
+          new TextRun({ text: line, bold: true, size: FONT_SIZE, font: FONT }),
         ],
       })
     );
@@ -118,49 +123,40 @@ function buildExamDoc({ config, questions }) {
 
   headerParagraphs.push(new Paragraph({ spacing: { after: 200 }, children: [] }));
 
-  // -- Build question paragraphs (2-column layout via splitting into left/right) --
-  const questionParagraphs = buildQuestionParagraphs(questions);
-
-  // -- Signature footer table --
-  const signatureTable = buildSignatureTable();
+  // -- Build signature footer --
+  const signatureFooter = buildSignatureFooter(signatureImageBuffer);
 
   // -- Assemble pages --
-  // We need multi-column sections. The docx library supports columns per section.
-  // Strategy: header is single-column section, questions are 2-column section, footer is single-column
-  const ITEMS_PER_PAGE = 16; // approximate items per page in 2-col
-  const pages = [];
-  
-  // Split questions into page-sized chunks
+  const ITEMS_PER_PAGE = 16;
   const pageChunks = [];
   for (let i = 0; i < questions.length; i += ITEMS_PER_PAGE) {
     pageChunks.push(questions.slice(i, i + ITEMS_PER_PAGE));
   }
 
+  const pages = [];
+
   for (let pageIdx = 0; pageIdx < pageChunks.length; pageIdx++) {
     const chunk = pageChunks[pageIdx];
     const startNum = pageIdx * ITEMS_PER_PAGE + 1;
     const qParagraphs = buildQuestionParagraphs(chunk, startNum);
+    const isLast = pageIdx === pageChunks.length - 1;
 
     if (pageIdx === 0) {
-      // First page: header + questions (2-col) + signature
+      // First page: header (1-col)
       pages.push({
         properties: {
           page: {
             margin: {
               top: convertInchesToTwip(0.5),
-              bottom: convertInchesToTwip(0.5),
+              bottom: convertInchesToTwip(0.8),
               left: convertInchesToTwip(0.7),
               right: convertInchesToTwip(0.7),
             },
           },
-          column: {
-            space: convertInchesToTwip(0.3),
-            count: 1,
-          },
+          column: { count: 1 },
         },
-        children: [
-          ...headerParagraphs,
-        ],
+        footers: isLast ? { default: signatureFooter } : undefined,
+        children: [...headerParagraphs],
       });
 
       // 2-column section for questions
@@ -174,20 +170,8 @@ function buildExamDoc({ config, questions }) {
         },
         children: qParagraphs,
       });
-
-      // Back to single column for signature
-      pages.push({
-        properties: {
-          type: SectionType.CONTINUOUS,
-          column: { count: 1 },
-        },
-        children: [
-          new Paragraph({ spacing: { before: 200 }, children: [] }),
-          signatureTable,
-        ],
-      });
     } else {
-      // Subsequent pages: header image + 2-col questions + signature
+      // Subsequent pages
       const pageHeader = [];
       if (headerImageBuffer) {
         pageHeader.push(
@@ -210,13 +194,14 @@ function buildExamDoc({ config, questions }) {
           page: {
             margin: {
               top: convertInchesToTwip(0.5),
-              bottom: convertInchesToTwip(0.5),
+              bottom: convertInchesToTwip(0.8),
               left: convertInchesToTwip(0.7),
               right: convertInchesToTwip(0.7),
             },
           },
           column: { count: 1 },
         },
+        footers: isLast ? { default: signatureFooter } : undefined,
         children: pageHeader,
       });
 
@@ -230,17 +215,6 @@ function buildExamDoc({ config, questions }) {
         },
         children: qParagraphs,
       });
-
-      pages.push({
-        properties: {
-          type: SectionType.CONTINUOUS,
-          column: { count: 1 },
-        },
-        children: [
-          new Paragraph({ spacing: { before: 200 }, children: [] }),
-          signatureTable,
-        ],
-      });
     }
   }
 
@@ -251,13 +225,14 @@ function buildExamDoc({ config, questions }) {
         page: {
           margin: {
             top: convertInchesToTwip(0.5),
-            bottom: convertInchesToTwip(0.5),
+            bottom: convertInchesToTwip(0.8),
             left: convertInchesToTwip(0.7),
             right: convertInchesToTwip(0.7),
           },
         },
       },
-      children: [...headerParagraphs, signatureTable],
+      footers: { default: signatureFooter },
+      children: [...headerParagraphs],
     });
   }
 
@@ -276,13 +251,13 @@ function buildQuestionParagraphs(questions, startNum = 1) {
     const num = startNum + i;
     const choices = ['A', 'B', 'C', 'D'];
 
-    // Question text
+    // Question text with spacing after for 1 line gap between items
     paragraphs.push(
       new Paragraph({
-        spacing: { before: 120, after: 40 },
+        spacing: { before: 200, after: 40 },
         children: [
-          new TextRun({ text: `${num}. `, bold: false, size: 20 }),
-          new TextRun({ text: q.questionText, size: 20 }),
+          new TextRun({ text: `${num}. `, bold: false, size: FONT_SIZE, font: FONT }),
+          new TextRun({ text: q.questionText, size: FONT_SIZE, font: FONT }),
         ],
       })
     );
@@ -300,7 +275,8 @@ function buildQuestionParagraphs(questions, startNum = 1) {
           children: [
             new TextRun({
               text: `${letter}) ${choiceText}`,
-              size: 20,
+              size: FONT_SIZE,
+              font: FONT,
               color: isCorrect ? 'FF0000' : '000000',
             }),
           ],
@@ -312,7 +288,7 @@ function buildQuestionParagraphs(questions, startNum = 1) {
   return paragraphs;
 }
 
-function buildSignatureTable() {
+function buildSignatureFooter(signatureImageBuffer) {
   const roles = [
     { label: 'Prepared by:', title: 'Faculty' },
     { label: 'Reviewed by:', title: 'Department Chair' },
@@ -320,7 +296,7 @@ function buildSignatureTable() {
     { label: 'Approved by:', title: 'Vice President for\nAcademics and Student\nServices' },
   ];
 
-  const noBorder = {
+  const thinBorder = {
     top: { style: BorderStyle.SINGLE, size: 1 },
     bottom: { style: BorderStyle.SINGLE, size: 1 },
     left: { style: BorderStyle.SINGLE, size: 1 },
@@ -331,63 +307,85 @@ function buildSignatureTable() {
   const row1 = new TableRow({
     children: roles.map(r =>
       new TableCell({
-        borders: noBorder,
+        borders: thinBorder,
         width: { size: 25, type: WidthType.PERCENTAGE },
         children: [
           new Paragraph({
             spacing: { after: 20 },
-            children: [new TextRun({ text: r.label, size: 18 })],
+            children: [new TextRun({ text: r.label, size: FONT_SIZE_SMALL, font: FONT })],
           }),
         ],
       })
     ),
   });
 
-  // Row 2: Signature lines
-  const row2 = new TableRow({
-    children: roles.map(r =>
-      new TableCell({
-        borders: noBorder,
-        width: { size: 25, type: WidthType.PERCENTAGE },
+  // Row 2: Signature lines (with optional uploaded signature image)
+  const signatureCells = roles.map((r, idx) => {
+    const cellChildren = [];
+    if (idx === 0 && signatureImageBuffer) {
+      cellChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 60 },
+          children: [
+            new ImageRun({
+              data: signatureImageBuffer,
+              transformation: { width: 120, height: 50 },
+              type: 'png',
+            }),
+          ],
+        })
+      );
+    } else {
+      cellChildren.push(new Paragraph({ spacing: { before: 400 }, children: [] }));
+    }
+    cellChildren.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 20 },
         children: [
-          new Paragraph({ spacing: { before: 400 }, children: [] }),
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 20 },
-            children: [
-              new TextRun({ text: 'Signature over Printed Name', bold: true, size: 18 }),
-            ],
-          }),
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [
-              new TextRun({ text: r.title, italics: true, size: 18 }),
-            ],
-          }),
+          new TextRun({ text: 'Signature over Printed Name', bold: true, size: FONT_SIZE_SMALL, font: FONT }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({ text: r.title, italics: true, size: FONT_SIZE_SMALL, font: FONT }),
         ],
       })
-    ),
+    );
+    return new TableCell({
+      borders: thinBorder,
+      width: { size: 25, type: WidthType.PERCENTAGE },
+      children: cellChildren,
+    });
   });
+
+  const row2 = new TableRow({ children: signatureCells });
 
   // Row 3: Date
   const row3 = new TableRow({
     children: roles.map(() =>
       new TableCell({
-        borders: noBorder,
+        borders: thinBorder,
         width: { size: 25, type: WidthType.PERCENTAGE },
         children: [
           new Paragraph({
-            children: [new TextRun({ text: 'Date:', size: 18 })],
+            children: [new TextRun({ text: 'Date:', size: FONT_SIZE_SMALL, font: FONT })],
           }),
         ],
       })
     ),
   });
 
-  return new Table({
+  const signatureTable = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     layout: TableLayoutType.FIXED,
     rows: [row1, row2, row3],
+  });
+
+  return new Footer({
+    children: [signatureTable],
   });
 }
 

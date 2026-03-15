@@ -10,17 +10,21 @@ export default function ReviewExport() {
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
 
-  const handleExport = async (format) => {
+  const handleExport = async () => {
     setExporting(true)
     setError('')
     try {
       const res = await axios.post(
         '/api/exam/export',
-        { config, questions, format },
+        {
+          config,
+          questions,
+          format: 'docx',
+          signatureImage: config.signatureImage || null,
+        },
         { responseType: 'blob' }
       )
 
-      // Download file
       const blob = new Blob([res.data], {
         type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       })
@@ -39,56 +43,68 @@ export default function ReviewExport() {
     }
   }
 
+  const totalRequired = tos?.totals?.grandTotal || 0
+  const isCompliant = questions.length === totalRequired
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Step 4: Review & Export</h1>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Review & Export</h1>
+        <p className="text-gray-500 mt-1">Review your exam before exporting to .docx format.</p>
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           {/* Summary card */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="font-bold text-lg mb-3">Exam Summary</h2>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-gray-500">Course:</span>{' '}
-                <span className="font-medium">{config.courseCode} — {config.courseTitle}</span>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 className="font-bold text-lg text-gray-900 mb-4">Exam Summary</h2>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="bg-gray-50 rounded-xl p-3">
+                <span className="text-xs text-gray-400 font-medium uppercase">Course</span>
+                <p className="font-semibold text-gray-800 mt-0.5">{config.courseCode} — {config.courseTitle}</p>
               </div>
-              <div>
-                <span className="text-gray-500">Exam Type:</span>{' '}
-                <span className="font-medium">{config.examType}</span>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <span className="text-xs text-gray-400 font-medium uppercase">Exam Type</span>
+                <p className="font-semibold text-gray-800 mt-0.5">{config.examType}</p>
               </div>
-              <div>
-                <span className="text-gray-500">Semester:</span>{' '}
-                <span className="font-medium">{config.semester} Sem, AY {config.academicYear}</span>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <span className="text-xs text-gray-400 font-medium uppercase">Semester</span>
+                <p className="font-semibold text-gray-800 mt-0.5">{config.semester} Sem, AY {config.academicYear}</p>
               </div>
-              <div>
-                <span className="text-gray-500">Total Questions:</span>{' '}
-                <span className="font-medium">{questions.length}</span>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <span className="text-xs text-gray-400 font-medium uppercase">Questions</span>
+                <p className={`font-semibold mt-0.5 ${isCompliant ? 'text-green-700' : 'text-amber-700'}`}>
+                  {questions.length} {totalRequired > 0 && `/ ${totalRequired}`}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Question preview */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="font-bold text-lg mb-3">Question Preview</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 className="font-bold text-lg text-gray-900 mb-4">Question Preview</h2>
             {questions.length === 0 ? (
-              <p className="text-gray-400 text-sm">No questions added yet.</p>
+              <div className="text-center py-12">
+                <div className="text-3xl mb-2">📝</div>
+                <p className="text-gray-400 text-sm">No questions added yet.</p>
+              </div>
             ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                 {questions.map((q, i) => (
-                  <div key={q.id} className="border-b pb-2">
+                  <div key={q.id} className="border-b border-gray-100 pb-3">
                     <p className="text-sm">
-                      <strong>{i + 1}.</strong> {q.questionText}
+                      <span className="font-bold text-green-700 mr-1">{i + 1}.</span>
+                      <span className="font-medium text-gray-800">{q.questionText}</span>
                     </p>
-                    <div className="ml-4 mt-1 grid grid-cols-2 gap-x-4 text-xs">
+                    <div className="ml-6 mt-1.5 grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
                       {['A', 'B', 'C', 'D'].map((letter) => (
                         <span
                           key={letter}
-                          className={
+                          className={`flex items-center gap-1 ${
                             q.correctAnswer === letter
-                              ? 'text-red-600 font-medium'
-                              : 'text-gray-600'
-                          }
+                              ? 'text-red-600 font-semibold'
+                              : 'text-gray-500'
+                          }`}
                         >
                           {letter}) {q[`choice${letter}`]}
                         </span>
@@ -100,34 +116,36 @@ export default function ReviewExport() {
             )}
           </div>
 
-          {/* Export buttons */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="font-bold text-lg mb-3">Export</h2>
+          {/* Export section */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 className="font-bold text-lg text-gray-900 mb-4">Export</h2>
 
-            {tos && questions.length !== tos.totals.grandTotal && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-yellow-800">
-                ⚠️ You have <strong>{questions.length}</strong> questions but the TOS requires{' '}
-                <strong>{tos.totals.grandTotal}</strong>. You can still export.
+            {tos && !isCompliant && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
+                You have <strong>{questions.length}</strong> questions but the TOS requires{' '}
+                <strong>{totalRequired}</strong>. You can still export.
               </div>
             )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleExport('docx')}
-                disabled={exporting || questions.length === 0}
-                className="bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition"
-              >
-                {exporting ? 'Generating...' : '📥 Export as .docx'}
-              </button>
-            </div>
+            <button
+              onClick={handleExport}
+              disabled={exporting || questions.length === 0}
+              className="bg-green-700 hover:bg-green-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl text-sm font-semibold transition shadow-sm"
+            >
+              {exporting ? 'Generating...' : 'Export as .docx'}
+            </button>
 
-            {error && <p className="text-red-600 text-sm mt-3">{error}</p>}
+            {error && (
+              <div className="mt-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-sm text-red-700">
+                {error}
+              </div>
+            )}
           </div>
 
           {/* Nav */}
           <button
             onClick={() => navigate('/questions')}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium transition"
+            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-medium transition"
           >
             ← Back to Questions
           </button>

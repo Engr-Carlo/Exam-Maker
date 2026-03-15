@@ -14,6 +14,7 @@ const DEFAULT_CONFIG = {
   instructorName: '',
   instructions:
     'INSTRUCTIONS:\n1. Read the instructions for each type of exam carefully. you have one and a half (1.5) hours to answer this exam.\nIf you have questions, please raise them to the proctor only.\n\nMultiple Choice: Shade the circle corresponding to the letter of your answer in the test paper. Use only a black or blue ballpoint pen for shading. Refrain from using pencils and erasers, as any corrections or unshaded answers will be considered incorrect.',
+  signatureImage: null,
 }
 
 const STORAGE_KEY = 'exam-maker-state'
@@ -76,7 +77,6 @@ export function ExamProvider({ children }) {
     setQuestions(newOrder)
   }
 
-  // Auto-order: by topic index in TOS, then by cognitive level
   const autoOrderQuestions = () => {
     if (!tos) return
     const topicOrder = tos.topics.map((t) => t.name)
@@ -97,7 +97,6 @@ export function ExamProvider({ children }) {
     setQuestions(sorted)
   }
 
-  // Shuffle choices for all questions (randomize A,B,C,D order) 
   const shuffleAllChoices = () => {
     setQuestions((prev) =>
       prev.map((q) => {
@@ -107,12 +106,10 @@ export function ExamProvider({ children }) {
           { letter: 'C', text: q.choiceC },
           { letter: 'D', text: q.choiceD },
         ]
-        // Fisher-Yates shuffle
         for (let i = choices.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1))
           ;[choices[i], choices[j]] = [choices[j], choices[i]]
         }
-        // Find new correct answer letter
         const correctOriginal = q.correctAnswer
         const originalText = q[`choice${correctOriginal}`]
         const newCorrectIndex = choices.findIndex((c) => c.text === originalText)

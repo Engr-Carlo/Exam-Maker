@@ -1,63 +1,50 @@
 const XLSX = require('xlsx');
 
-function parseTOS(filePath) {
-  // Accept either a file path string (local dev) or a Buffer (Vercel memory storage)
-  const workbook = Buffer.isBuffer(filePath)
-    ? XLSX.read(filePath, { type: 'buffer' })
-    : XLSX.readFile(filePath);
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+function parseSheet(sheet) {
+  return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+}
 
-  // Find the header row containing "TOPIC"
-  let headerRowIndex = -1;
+function findHeaderRow(rows) {
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i].map(c => String(c).trim().toUpperCase());
-    if (row.includes('TOPIC')) {
-      headerRowIndex = i;
-      break;
-    }
+    if (row.includes('TOPIC')) return i;
   }
+  return -1;
+}
 
-  if (headerRowIndex === -1) {
-    throw new Error('Could not find header row with "TOPIC" in the TOS file.');
-  }
-
-  const headerRow = rows[headerRowIndex].map(c => String(c).trim().toUpperCase());
-
-  // Map column indices
+function buildColMap(headerRow) {
   const colMap = {};
   const cogLevels = ['REMEMBERING', 'UNDERSTANDING', 'APPLYING', 'ANALYZING', 'EVALUATING', 'CREATING'];
-
   for (let j = 0; j < headerRow.length; j++) {
     const cell = headerRow[j];
     if (cell === 'TOPIC') colMap.topic = j;
     if (cell === 'TOTAL') colMap.total = j;
     if (cell.includes('TEACHING') || cell.includes('HOURS')) colMap.hours = j;
     if (cell.includes('COMMENT') || cell.includes('REMARK')) colMap.comments = j;
-
     for (const level of cogLevels) {
       if (cell.includes(level) || cell.startsWith(level.substring(0, 5))) {
         colMap[level.toLowerCase()] = j;
       }
     }
   }
+  return colMap;
+}
 
-  // Also check the row above headerRowIndex for merged cells (LOTS/HOTS labels)
-  // And the row below for "No. of Test Items" sub-headers — skip it
-  let dataStartRow = headerRowIndex + 1;
-  // Skip sub-header rows like "No. of Test Items"
-  for (let i = dataStartRow; i < rows.length; i++) {
+function findDataStartRow(rows, headerRowIndex, colMap) {
+  let startRow = headerRowIndex + 1;
+  for (let i = startRow; i < rows.length; i++) {
     const row = rows[i];
     const firstCellStr = String(row[colMap.topic] || '').trim().toLowerCase();
     if (firstCellStr.includes('no. of') || firstCellStr.includes('test items') || firstCellStr === '') {
-      dataStartRow = i + 1;
+      startRow = i + 1;
     } else {
       break;
     }
   }
+  return startRow;
+}
 
-  // Extract metadata from rows above header
+function extractMetadata(rows, headerRowIndex) {
   let department = '', courseCode = '', courseTitle = '', semester = '', academicYear = '', term = '';
   for (let i = 0; i < headerRowIndex; i++) {
     const rowStr = rows[i].join(' ').trim();
@@ -80,38 +67,105 @@ function parseTOS(filePath) {
       if (termMatch) term = termMatch[1].trim();
     }
   }
+  return { department, courseCode, courseTitle, semester, academicYear, term };
+}
 
-  // Parse topic rows
+// Parse item ranges like "[1-4]" or "[12-14]" into an array of numbers
+function parseItemRange(cellValue) {
+  const str = String(cellValue).trim();
+  if (!str || str === '0') return [];
+  // Match patterns like [1-4], [5-11], etc.
+  const match = str.match(/\[?\s*(\d+)\s*[-–]\s*(\d+)\s*\]?/);
+  if (match) {
+    const from = parseInt(match[1]);
+    const to = parseInt(match[2]);
+    const items = [];
+    for (let n = from; n <= to; n++) items.push(n);
+    return items;
+  }
+  // Match single number like [33] or just "33"
+  const single = str.match(/\[?\s*(\d+)\s*\]?/);
+  if (single) return [parseInt(single[1])];
+  return [];
+}
+
+function parseTOS(filePath) {
+  const workbook = Buffer.isBuffer(filePath)
+    ? XLSX.read(filePath, { type: 'buffer' })
+    : XLSX.readFile(filePath);
+
+  // ---- SHEET 1: Item counts ----
+  const sheet1 = workbook.Sheets[workbook.SheetNames[0]];
+  const rows1 = parseSheet(sheet1);
+  const headerRowIndex1 = findHeaderRow(rows1);
+  if (headerRowIndex1 === -1) throw new Error('Could not find TOPIC header in TOS.');
+  const headerRow1 = rows1[headerRowIndex1].map(c => String(c).trim().toUpperCase());
+  const colMap1 = buildColMap(headerRow1);
+  const dataStart1 = findDataStartRow(rows1, headerRowIndex1, colMap1);
+  const meta = extractMetadata(rows1, headerRowIndex1);
+
   const topics = [];
-  for (let i = dataStartRow; i < rows.length; i++) {
-    const row = rows[i];
-    const topicName = String(row[colMap.topic] || '').trim();
+  for (let i = dataStart1; i < rows1.length; i++) {
+    const row = rows1[i];
+    const topicName = String(row[colMap1.topic] || '').trim();
+    if (topicName.toUpperCase() === 'TOTAL') break;
+    if (!topicName || /^\d+$/.test(String(row[0] || '').trim())) continue;
 
-    // Stop at TOTAL row or empty
-    if (topicName.toUpperCase() === 'TOTAL' || topicName === '') {
-      // Check if it's really TOTAL
-      if (topicName.toUpperCase() === 'TOTAL') break;
-      // Skip numbered empty rows (like "5", "6", etc.)
-      const firstCell = String(row[0] || '').trim();
-      if (/^\d+$/.test(firstCell)) continue;
-      break;
-    }
-
-    const topic = {
+    topics.push({
       name: topicName,
-      remembering: parseInt(row[colMap.remembering]) || 0,
-      understanding: parseInt(row[colMap.understanding]) || 0,
-      applying: parseInt(row[colMap.applying]) || 0,
-      analyzing: parseInt(row[colMap.analyzing]) || 0,
-      evaluating: parseInt(row[colMap.evaluating]) || 0,
-      creating: parseInt(row[colMap.creating]) || 0,
-      total: parseInt(row[colMap.total]) || 0,
-      teachingHours: parseFloat(row[colMap.hours]) || 0,
-    };
-    topics.push(topic);
+      remembering: parseInt(row[colMap1.remembering]) || 0,
+      understanding: parseInt(row[colMap1.understanding]) || 0,
+      applying: parseInt(row[colMap1.applying]) || 0,
+      analyzing: parseInt(row[colMap1.analyzing]) || 0,
+      evaluating: parseInt(row[colMap1.evaluating]) || 0,
+      creating: parseInt(row[colMap1.creating]) || 0,
+      total: parseInt(row[colMap1.total]) || 0,
+      teachingHours: parseFloat(row[colMap1.hours]) || 0,
+      // Will be filled from sheet 2
+      itemRanges: {},
+    });
   }
 
-  // Compute totals
+  // ---- SHEET 2: Item number ranges (if present) ----
+  if (workbook.SheetNames.length >= 2) {
+    const sheet2 = workbook.Sheets[workbook.SheetNames[1]];
+    const rows2 = parseSheet(sheet2);
+    const headerRowIndex2 = findHeaderRow(rows2);
+    if (headerRowIndex2 !== -1) {
+      const headerRow2 = rows2[headerRowIndex2].map(c => String(c).trim().toUpperCase());
+      const colMap2 = buildColMap(headerRow2);
+      const dataStart2 = findDataStartRow(rows2, headerRowIndex2, colMap2);
+
+      let topicIdx = 0;
+      for (let i = dataStart2; i < rows2.length && topicIdx < topics.length; i++) {
+        const row = rows2[i];
+        const topicName = String(row[colMap2.topic] || '').trim();
+        if (topicName.toUpperCase() === 'TOTAL') break;
+        if (!topicName || /^\d+$/.test(String(row[0] || '').trim())) continue;
+
+        const cogLevels = ['remembering', 'understanding', 'applying', 'analyzing', 'evaluating', 'creating'];
+        const ranges = {};
+        for (const level of cogLevels) {
+          if (colMap2[level] !== undefined) {
+            ranges[level] = parseItemRange(row[colMap2[level]]);
+          }
+        }
+        topics[topicIdx].itemRanges = ranges;
+        topicIdx++;
+      }
+    }
+  }
+
+  // Build item-to-topic+level mapping from sheet 2 ranges
+  const itemMapping = {};
+  for (const topic of topics) {
+    for (const [level, items] of Object.entries(topic.itemRanges)) {
+      for (const num of items) {
+        itemMapping[num] = { topic: topic.name, cognitiveLevel: level };
+      }
+    }
+  }
+
   const totals = {
     remembering: 0, understanding: 0, applying: 0,
     analyzing: 0, evaluating: 0, creating: 0, grandTotal: 0,
@@ -127,14 +181,10 @@ function parseTOS(filePath) {
   }
 
   return {
-    department,
-    courseCode,
-    courseTitle,
-    semester,
-    academicYear,
-    term,
+    ...meta,
     topics,
     totals,
+    itemMapping,
   };
 }
 

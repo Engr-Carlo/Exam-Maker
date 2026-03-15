@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import axios from 'axios'
 import { useExam } from '../context/ExamContext'
 import { useNavigate } from 'react-router-dom'
@@ -8,6 +8,8 @@ export default function TosUpload() {
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [dragActive, setDragActive] = useState(false)
+  const inputRef = useRef(null)
   const navigate = useNavigate()
 
   const handleUpload = async () => {
@@ -28,99 +30,169 @@ export default function TosUpload() {
     }
   }
 
+  const handleDrag = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true)
+    else if (e.type === 'dragleave') setDragActive(false)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0])
+      setError('')
+    }
+  }
+
   const cogLevels = ['remembering', 'understanding', 'applying', 'analyzing', 'evaluating', 'creating']
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Step 1: Upload Table of Specifications (TOS)</h1>
-      <p className="text-gray-600 mb-6">
-        Upload your TOS Excel file (.xlsx). The system will parse topics, cognitive levels, and item distribution.
-      </p>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Upload Table of Specifications</h1>
+        <p className="text-gray-500 mt-1">
+          Upload your TOS Excel file (.xlsx) to extract topics, cognitive levels, and item distribution.
+        </p>
+      </div>
 
       {/* Upload area */}
-      <div className="bg-white rounded-xl shadow p-6 mb-6">
-        <div className="flex items-center gap-4">
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={(e) => {
-              setFile(e.target.files[0])
-              setError('')
-            }}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-          />
-          <button
-            onClick={handleUpload}
-            disabled={loading || !file}
-            className="bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white px-6 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap"
-          >
-            {loading ? 'Parsing...' : 'Upload & Parse'}
-          </button>
+      <div
+        className={`bg-white rounded-2xl border-2 border-dashed p-8 mb-8 transition-all text-center ${
+          dragActive ? 'border-green-500 bg-green-50' : file ? 'border-green-300 bg-green-50/50' : 'border-gray-200 hover:border-gray-300'
+        }`}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={(e) => { setFile(e.target.files[0]); setError('') }}
+          className="hidden"
+        />
+
+        <div className="flex flex-col items-center gap-3">
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ${
+            file ? 'bg-green-100' : 'bg-gray-100'
+          }`}>
+            {file ? '✓' : '📋'}
+          </div>
+
+          {file ? (
+            <div>
+              <p className="font-semibold text-green-800">{file.name}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{(file.size / 1024).toFixed(1)} KB</p>
+            </div>
+          ) : (
+            <div>
+              <p className="font-medium text-gray-700">Drag & drop your TOS file here</p>
+              <p className="text-sm text-gray-400 mt-0.5">or click to browse</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 mt-2">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl font-medium transition"
+            >
+              {file ? 'Change File' : 'Browse Files'}
+            </button>
+            {file && (
+              <button
+                onClick={handleUpload}
+                disabled={loading}
+                className="text-sm bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white px-6 py-2 rounded-xl font-medium transition"
+              >
+                {loading ? 'Parsing...' : 'Upload & Parse'}
+              </button>
+            )}
+          </div>
         </div>
-        {error && <p className="text-red-600 text-sm mt-3">{error}</p>}
+
+        {error && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-sm text-red-700 inline-block">
+            {error}
+          </div>
+        )}
       </div>
 
       {/* Parsed TOS display */}
       {tos && (
-        <div className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-lg font-bold mb-1">Parsed TOS</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            {tos.courseCode} — {tos.courseTitle} | {tos.semester} | AY {tos.academicYear} | {tos.term}
-          </p>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Parsed TOS</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {tos.courseCode} — {tos.courseTitle} | {tos.semester} | AY {tos.academicYear}
+              </p>
+            </div>
+          </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-gray-200">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-green-50">
-                  <th className="border px-3 py-2 text-left">Topic</th>
+                <tr className="bg-green-50/80">
+                  <th className="border-b border-r border-gray-200 px-3 py-2.5 text-left font-semibold text-gray-700">Topic</th>
                   {cogLevels.map((l) => (
-                    <th key={l} className="border px-3 py-2 text-center capitalize">{l}</th>
+                    <th key={l} className="border-b border-r border-gray-200 px-3 py-2.5 text-center capitalize font-semibold text-gray-700">{l}</th>
                   ))}
-                  <th className="border px-3 py-2 text-center font-bold">Total</th>
-                  <th className="border px-3 py-2 text-center">Hours</th>
+                  <th className="border-b border-r border-gray-200 px-3 py-2.5 text-center font-bold text-gray-800">Total</th>
+                  <th className="border-b border-gray-200 px-3 py-2.5 text-center font-semibold text-gray-700">Hours</th>
                 </tr>
               </thead>
               <tbody>
                 {tos.topics.map((t, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <td className="border px-3 py-2">{t.name}</td>
+                  <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="border-b border-r border-gray-100 px-3 py-2 font-medium text-gray-800">{t.name}</td>
                     {cogLevels.map((l) => (
-                      <td key={l} className="border px-3 py-2 text-center">
+                      <td key={l} className={`border-b border-r border-gray-100 px-3 py-2 text-center ${
+                        t[l] > 0 ? 'text-gray-800 font-medium' : 'text-gray-300'
+                      }`}>
                         {t[l] || '-'}
                       </td>
                     ))}
-                    <td className="border px-3 py-2 text-center font-bold">{t.total}</td>
-                    <td className="border px-3 py-2 text-center">{t.teachingHours}</td>
+                    <td className="border-b border-r border-gray-100 px-3 py-2 text-center font-bold text-gray-900">{t.total}</td>
+                    <td className="border-b border-gray-100 px-3 py-2 text-center text-gray-600">{t.teachingHours}</td>
                   </tr>
                 ))}
                 {/* Totals row */}
-                <tr className="bg-green-50 font-bold">
-                  <td className="border px-3 py-2">TOTAL</td>
+                <tr className="bg-green-50/80 font-bold">
+                  <td className="border-r border-gray-200 px-3 py-2.5 text-gray-800">TOTAL</td>
                   {cogLevels.map((l) => (
-                    <td key={l} className="border px-3 py-2 text-center">{tos.totals[l]}</td>
+                    <td key={l} className="border-r border-gray-200 px-3 py-2.5 text-center text-gray-800">{tos.totals[l]}</td>
                   ))}
-                  <td className="border px-3 py-2 text-center">{tos.totals.grandTotal}</td>
-                  <td className="border px-3 py-2 text-center">—</td>
+                  <td className="border-r border-gray-200 px-3 py-2.5 text-center text-green-800 text-lg">{tos.totals.grandTotal}</td>
+                  <td className="px-3 py-2.5 text-center text-gray-400">—</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           {/* LOTS/HOTS summary */}
-          <div className="mt-4 flex gap-6 text-sm">
-            <span className="bg-blue-50 px-3 py-1 rounded">
-              <strong>LOTS (60%):</strong>{' '}
-              {tos.totals.remembering + tos.totals.understanding + tos.totals.applying}
-            </span>
-            <span className="bg-orange-50 px-3 py-1 rounded">
-              <strong>HOTS (40%):</strong>{' '}
-              {tos.totals.analyzing + tos.totals.evaluating + tos.totals.creating}
-            </span>
+          <div className="mt-5 flex gap-4">
+            <div className="flex-1 bg-blue-50 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">LOTS (60%)</p>
+              <p className="text-2xl font-bold text-blue-800 mt-0.5">
+                {tos.totals.remembering + tos.totals.understanding + tos.totals.applying}
+              </p>
+            </div>
+            <div className="flex-1 bg-orange-50 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">HOTS (40%)</p>
+              <p className="text-2xl font-bold text-orange-800 mt-0.5">
+                {tos.totals.analyzing + tos.totals.evaluating + tos.totals.creating}
+              </p>
+            </div>
           </div>
 
           <button
             onClick={() => navigate('/config')}
-            className="mt-6 bg-green-700 hover:bg-green-800 text-white px-6 py-2 rounded-lg text-sm font-medium transition"
+            className="mt-6 bg-green-700 hover:bg-green-800 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm"
           >
             Next: Configure Exam →
           </button>
