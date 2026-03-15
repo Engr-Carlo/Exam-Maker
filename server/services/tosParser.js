@@ -89,13 +89,19 @@ function parseItemRange(cellValue) {
   return [];
 }
 
+function findTosSheet(workbook) {
+  // Prefer a sheet whose name contains "TOS" (case-insensitive)
+  const tosName = workbook.SheetNames.find(n => n.trim().toUpperCase().includes('TOS'))
+  return workbook.Sheets[tosName || workbook.SheetNames[0]]
+}
+
 function parseTOS(filePath) {
   const workbook = Buffer.isBuffer(filePath)
     ? XLSX.read(filePath, { type: 'buffer' })
     : XLSX.readFile(filePath);
 
   // ---- SHEET 1: Item counts ----
-  const sheet1 = workbook.Sheets[workbook.SheetNames[0]];
+  const sheet1 = findTosSheet(workbook);
   const rows1 = parseSheet(sheet1);
   const headerRowIndex1 = findHeaderRow(rows1);
   if (headerRowIndex1 === -1) throw new Error('Could not find TOPIC header in TOS.');

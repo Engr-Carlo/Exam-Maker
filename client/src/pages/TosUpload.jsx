@@ -179,13 +179,19 @@ export default function TosUpload() {
             <div className="flex-1 bg-blue-50 rounded-xl px-4 py-3">
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">LOTS (60%)</p>
               <p className="text-2xl font-bold text-blue-800 mt-0.5">
-                {tos.totals.remembering + tos.totals.understanding + tos.totals.applying}
+                {(() => {
+                  const lots = tos.totals.remembering + tos.totals.understanding + tos.totals.applying
+                  return lots > 0 ? lots : Math.round(tos.totals.grandTotal * 0.6)
+                })()}
               </p>
             </div>
             <div className="flex-1 bg-orange-50 rounded-xl px-4 py-3">
               <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">HOTS (40%)</p>
               <p className="text-2xl font-bold text-orange-800 mt-0.5">
-                {tos.totals.analyzing + tos.totals.evaluating + tos.totals.creating}
+                {(() => {
+                  const hots = tos.totals.analyzing + tos.totals.evaluating + tos.totals.creating
+                  return hots > 0 ? hots : Math.round(tos.totals.grandTotal * 0.4)
+                })()}
               </p>
             </div>
           </div>

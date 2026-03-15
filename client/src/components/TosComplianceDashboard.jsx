@@ -13,36 +13,44 @@ export default function TosComplianceDashboard() {
     )
   }
 
-  // Count questions per topic * cognitive level
-  const counts = {}
-  for (const topic of tos.topics) {
-    counts[topic.name] = {}
-    for (const level of COG_LEVELS) {
-      counts[topic.name][level] = 0
-    }
-  }
-  for (const q of questions) {
-    if (counts[q.topic] && q.cognitiveLevel) {
-      counts[q.topic][q.cognitiveLevel] = (counts[q.topic][q.cognitiveLevel] || 0) + 1
-    }
-  }
-
   const totalCurrent = questions.length
   const totalRequired = tos.totals.grandTotal
+  const isFullyCompliant = totalCurrent === totalRequired
 
-  let metCells = 0
-  let totalCells = 0
+  // Detect if TOS has per-cognitive-level data or just topic totals
+  const hasLevelBreakdown = tos.topics.some(t =>
+    (t.remembering || 0) + (t.understanding || 0) + (t.applying || 0) +
+    (t.analyzing || 0) + (t.evaluating || 0) + (t.creating || 0) > 0
+  )
+
+  // Count questions per topic
+  const topicCounts = {}
+  for (const topic of tos.topics) topicCounts[topic.name] = 0
+  for (const q of questions) {
+    if (topicCounts[q.topic] !== undefined) topicCounts[q.topic]++
+  }
+
+  // Count questions per topic × cognitive level (only used in full mode)
+  const levelCounts = {}
+  if (hasLevelBreakdown) {
+    for (const topic of tos.topics) {
+      levelCounts[topic.name] = {}
+      for (const level of COG_LEVELS) levelCounts[topic.name][level] = 0
+    }
+    for (const q of questions) {
+      if (levelCounts[q.topic] && q.cognitiveLevel) {
+        levelCounts[q.topic][q.cognitiveLevel] = (levelCounts[q.topic][q.cognitiveLevel] || 0) + 1
+      }
+    }
+  }
 
   function cellClass(current, required) {
     if (required === 0 && current === 0) return 'bg-gray-50 text-gray-300'
-    if (current === required) { metCells++; totalCells++; return 'bg-emerald-100 text-emerald-800 font-semibold' }
-    totalCells++
+    if (current === required) return 'bg-emerald-100 text-emerald-800 font-semibold'
     if (current > required) return 'bg-red-100 text-red-700 font-semibold'
     if (current > 0) return 'bg-amber-100 text-amber-800'
     return 'bg-red-50 text-red-500'
   }
-
-  const isFullyCompliant = totalCurrent === totalRequired
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -59,60 +67,86 @@ export default function TosComplianceDashboard() {
         </span>
       </div>
 
-      <div className="overflow-x-auto -mx-2">
-        <table className="w-full text-xs border-collapse">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="border border-gray-200 px-2 py-1.5 text-left font-semibold text-gray-600">Topic</th>
-              {COG_LEVELS.map((l) => (
-                <th key={l} className="border border-gray-200 px-1.5 py-1.5 text-center font-semibold text-gray-600" title={l}>
-                  {l.substring(0, 3)}
-                </th>
-              ))}
-              <th className="border border-gray-200 px-2 py-1.5 text-center font-bold text-gray-700">Tot</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tos.topics.map((topic) => {
-              const topicCurrent = COG_LEVELS.reduce(
-                (sum, l) => sum + (counts[topic.name]?.[l] || 0),
-                0
-              )
-              return (
-                <tr key={topic.name}>
-                  <td className="border border-gray-200 px-2 py-1.5 text-xs max-w-[120px] truncate text-gray-700" title={topic.name}>
-                    {topic.name}
-                  </td>
-                  {COG_LEVELS.map((l) => {
-                    const current = counts[topic.name]?.[l] || 0
-                    const required = topic[l.toLowerCase()] || 0
-                    return (
-                      <td
-                        key={l}
-                        className={`border border-gray-200 px-1.5 py-1.5 text-center text-xs ${cellClass(current, required)}`}
-                        title={`${l}: ${current}/${required}`}
-                      >
-                        {current}/{required}
-                      </td>
-                    )
-                  })}
-                  <td
-                    className={`border border-gray-200 px-2 py-1.5 text-center font-bold text-xs ${
-                      topicCurrent === topic.total
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : topicCurrent > topic.total
-                        ? 'bg-red-100 text-red-700'
+      {hasLevelBreakdown ? (
+        // Full grid: topic × cognitive level
+        <div className="overflow-x-auto -mx-2">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="border border-gray-200 px-2 py-1.5 text-left font-semibold text-gray-600">Topic</th>
+                {COG_LEVELS.map((l) => (
+                  <th key={l} className="border border-gray-200 px-1.5 py-1.5 text-center font-semibold text-gray-600" title={l}>
+                    {l.substring(0, 3)}
+                  </th>
+                ))}
+                <th className="border border-gray-200 px-2 py-1.5 text-center font-bold text-gray-700">Tot</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tos.topics.map((topic) => {
+                const topicCurrent = COG_LEVELS.reduce((sum, l) => sum + (levelCounts[topic.name]?.[l] || 0), 0)
+                return (
+                  <tr key={topic.name}>
+                    <td className="border border-gray-200 px-2 py-1.5 text-xs max-w-[120px] truncate text-gray-700" title={topic.name}>
+                      {topic.name}
+                    </td>
+                    {COG_LEVELS.map((l) => {
+                      const current = levelCounts[topic.name]?.[l] || 0
+                      const required = topic[l.toLowerCase()] || 0
+                      return (
+                        <td key={l} className={`border border-gray-200 px-1.5 py-1.5 text-center text-xs ${cellClass(current, required)}`}
+                          title={`${l}: ${current}/${required}`}>
+                          {current}/{required}
+                        </td>
+                      )
+                    })}
+                    <td className={`border border-gray-200 px-2 py-1.5 text-center font-bold text-xs ${
+                      topicCurrent === topic.total ? 'bg-emerald-100 text-emerald-800'
+                        : topicCurrent > topic.total ? 'bg-red-100 text-red-700'
                         : 'bg-amber-100 text-amber-800'
-                    }`}
-                  >
-                    {topicCurrent}/{topic.total}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                    }`}>
+                      {topicCurrent}/{topic.total}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        // Simplified view: just topic totals
+        <div className="overflow-x-auto -mx-2">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="border border-gray-200 px-2 py-1.5 text-left font-semibold text-gray-600">Topic</th>
+                <th className="border border-gray-200 px-2 py-1.5 text-center font-semibold text-gray-600">Current</th>
+                <th className="border border-gray-200 px-2 py-1.5 text-center font-semibold text-gray-600">Required</th>
+                <th className="border border-gray-200 px-2 py-1.5 text-center font-semibold text-gray-600">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tos.topics.map((topic) => {
+                const current = topicCounts[topic.name] || 0
+                const required = topic.total || 0
+                const cls = cellClass(current, required)
+                return (
+                  <tr key={topic.name}>
+                    <td className="border border-gray-200 px-2 py-1.5 text-gray-700 max-w-[160px] truncate" title={topic.name}>
+                      {topic.name}
+                    </td>
+                    <td className={`border border-gray-200 px-2 py-1.5 text-center font-semibold ${cls}`}>{current}</td>
+                    <td className="border border-gray-200 px-2 py-1.5 text-center text-gray-600">{required}</td>
+                    <td className={`border border-gray-200 px-2 py-1.5 text-center ${cls}`}>
+                      {current === required ? '✓' : current > required ? 'Over' : `${required - current} left`}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
         <span className="flex items-center gap-1.5">
