@@ -75,6 +75,27 @@ function detectTotalColumn(rows, dataStartRow, colMap) {
   return colMap.total;
 }
 
+function parseCognitiveFallbackFromBand(row) {
+  // User format fallback: cognitive counts can appear in E..M (0-based: 4..12)
+  // due to merged headers / multi-column layouts.
+  const values = [];
+  for (let col = 4; col <= 12; col++) {
+    const num = parseInt(row[col], 10);
+    if (Number.isFinite(num)) values.push(num);
+  }
+
+  if (values.length < 6) return null;
+
+  return {
+    remembering: values[0] || 0,
+    understanding: values[1] || 0,
+    applying: values[2] || 0,
+    analyzing: values[3] || 0,
+    evaluating: values[4] || 0,
+    creating: values[5] || 0,
+  };
+}
+
 function findDataStartRow(rows, headerRowIndex, colMap) {
   let startRow = headerRowIndex + 1;
   for (let i = startRow; i < rows.length; i++) {
@@ -163,14 +184,35 @@ function parseTOS(filePath) {
     if (topicName.toUpperCase() === 'TOTAL') break;
     if (!topicName || /^\d+$/.test(String(row[0] || '').trim())) continue;
 
+    let remembering = parseInt(row[colMap1.remembering]) || 0;
+    let understanding = parseInt(row[colMap1.understanding]) || 0;
+    let applying = parseInt(row[colMap1.applying]) || 0;
+    let analyzing = parseInt(row[colMap1.analyzing]) || 0;
+    let evaluating = parseInt(row[colMap1.evaluating]) || 0;
+    let creating = parseInt(row[colMap1.creating]) || 0;
+
+    // Fallback for merged/shifted headers: pull six cognitive values from E..M band
+    const cogSum = remembering + understanding + applying + analyzing + evaluating + creating;
+    if (cogSum === 0) {
+      const fallback = parseCognitiveFallbackFromBand(row);
+      if (fallback) {
+        remembering = fallback.remembering;
+        understanding = fallback.understanding;
+        applying = fallback.applying;
+        analyzing = fallback.analyzing;
+        evaluating = fallback.evaluating;
+        creating = fallback.creating;
+      }
+    }
+
     topics.push({
       name: topicName,
-      remembering: parseInt(row[colMap1.remembering]) || 0,
-      understanding: parseInt(row[colMap1.understanding]) || 0,
-      applying: parseInt(row[colMap1.applying]) || 0,
-      analyzing: parseInt(row[colMap1.analyzing]) || 0,
-      evaluating: parseInt(row[colMap1.evaluating]) || 0,
-      creating: parseInt(row[colMap1.creating]) || 0,
+      remembering,
+      understanding,
+      applying,
+      analyzing,
+      evaluating,
+      creating,
       total: parseInt(row[resolvedTotalCol]) || 0,
       teachingHours: parseFloat(row[colMap1.hours]) || 0,
       // Will be filled from sheet 2
