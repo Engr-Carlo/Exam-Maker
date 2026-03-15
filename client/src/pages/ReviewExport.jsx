@@ -14,17 +14,20 @@ export default function ReviewExport() {
     setExporting(true)
     setError('')
     try {
+      // Strip large binary blobs from config before sending to avoid double-sending
+      const { signatureImage, templateFile, templateFileName, ...configForApi } = config
+
       const payload = {
-        config,
+        config: configForApi,
         questions,
         format: 'docx',
       }
 
-      // If template is uploaded, send it; otherwise send signature for default export
-      if (config.templateFile) {
-        payload.templateFile = config.templateFile
+      // Send binary data exactly once at top-level
+      if (templateFile) {
+        payload.templateFile = templateFile
       } else {
-        payload.signatureImage = config.signatureImage || null
+        payload.signatureImage = signatureImage || null
       }
 
       const res = await axios.post(
