@@ -1,0 +1,14 @@
+node_modules
+
+# Upload temp files (user-uploaded TOS files)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Build output
+client/dist
+
+# Reference/preview images in project root (not needed in repo)
+ML_page*.jpg
+TOS_page*.jpg
+image.png
+
