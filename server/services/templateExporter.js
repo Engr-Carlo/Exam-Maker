@@ -11,34 +11,32 @@ function escapeXml(str) {
 
 /**
  * Build OOXML paragraphs for all questions.
- * Minimal styling — inherits whatever the template defines.
- * Only adds red color (FF0000) for correct answers.
+ * Enforces Arial 10pt and consistent indenting regardless of template defaults.
  */
 function buildQuestionsXml(questions) {
   let xml = '';
+  const FONT_RPR = '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+  const FONT_RPR_CORRECT = '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:color w:val="FF0000"/></w:rPr>';
+
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
     const num = i + 1;
 
-    // Question paragraph
+    // Question paragraph: number hangs at margin, wrapped text aligns with choices
     xml +=
-      `<w:p><w:pPr><w:spacing w:after="40"/></w:pPr>` +
-      `<w:r><w:t xml:space="preserve">${escapeXml(`${num}. ${q.questionText}`)}</w:t></w:r></w:p>`;
+      `<w:p><w:pPr><w:spacing w:before="80" w:after="20"/><w:ind w:left="432" w:hanging="432"/></w:pPr>` +
+      `<w:r>${FONT_RPR}<w:t xml:space="preserve">${escapeXml(`${num}. ${q.questionText}`)}</w:t></w:r></w:p>`;
 
-    // Choice paragraphs
+    // Choice paragraphs: same left indent as question text
     for (const letter of ['A', 'B', 'C', 'D']) {
       const choiceText = q[`choice${letter}`] || '';
       const isCorrect = q.correctAnswer === letter;
-      const rPr = isCorrect ? '<w:rPr><w:color w:val="FF0000"/></w:rPr>' : '';
+      const rPr = isCorrect ? FONT_RPR_CORRECT : FONT_RPR;
+      const isLast = letter === 'D';
 
       xml +=
-        `<w:p><w:pPr><w:spacing w:after="20"/><w:ind w:left="360"/></w:pPr>` +
+        `<w:p><w:pPr><w:spacing w:after="${isLast ? '80' : '0'}"/><w:ind w:left="432"/></w:pPr>` +
         `<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(`${letter}) ${choiceText}`)}</w:t></w:r></w:p>`;
-    }
-
-    // Add small spacing paragraph between questions (except after last)
-    if (i < questions.length - 1) {
-      xml += `<w:p><w:pPr><w:spacing w:after="120"/></w:pPr></w:p>`;
     }
   }
   return xml;
