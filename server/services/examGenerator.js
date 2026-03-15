@@ -275,7 +275,7 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
     paragraphs.push(
       new Paragraph({
         spacing: { before: 80, after: 20 },
-        indent: { left: convertInchesToTwip(0.25), hanging: convertInchesToTwip(0.25) },
+        indent: { left: convertInchesToTwip(0.3), hanging: convertInchesToTwip(0.3) },
         children: [
           new TextRun({ text: `${num}. `, bold: false, size: fontSize, font }),
           new TextRun({ text: q.questionText, size: fontSize, font }),
@@ -283,7 +283,7 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
       })
     );
 
-    // Choices — tight spacing
+    // Choices — tight spacing, same indent level as question text
     for (let c = 0; c < choices.length; c++) {
       const letter = choices[c];
       const choiceText = q[`choice${letter}`] || '';
@@ -293,7 +293,7 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
       paragraphs.push(
         new Paragraph({
           spacing: { after: isLast ? 80 : 0 },
-          indent: { left: convertInchesToTwip(0.2) },
+          indent: { left: convertInchesToTwip(0.3) },
           children: [
             new TextRun({
               text: `${letter}) ${choiceText}`,
