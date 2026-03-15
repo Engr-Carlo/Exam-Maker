@@ -18,7 +18,7 @@ function buildColMap(headerRow) {
   for (let j = 0; j < headerRow.length; j++) {
     const cell = headerRow[j];
     if (cell === 'TOPIC') colMap.topic = j;
-    if (cell === 'TOTAL') colMap.total = j;
+    if (cell === 'TOTAL' || cell.includes('TOTAL') || cell.includes('NO. OF') || cell.includes('NUM OF') || cell.includes('NUMBER OF')) colMap.total = j;
     if (cell.includes('TEACHING') || cell.includes('HOURS')) colMap.hours = j;
     if (cell.includes('COMMENT') || cell.includes('REMARK')) colMap.comments = j;
     for (const level of cogLevels) {
@@ -163,6 +163,14 @@ function parseTOS(filePath) {
       for (const num of items) {
         itemMapping[num] = { topic: topic.name, cognitiveLevel: level };
       }
+    }
+  }
+
+  // If total column was missing/zero for a topic, fall back to sum of cognitive levels
+  for (const t of topics) {
+    const cogSum = t.remembering + t.understanding + t.applying + t.analyzing + t.evaluating + t.creating;
+    if (t.total === 0 && cogSum > 0) {
+      t.total = cogSum;
     }
   }
 

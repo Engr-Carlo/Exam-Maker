@@ -14,6 +14,8 @@ const DEFAULT_CONFIG = {
   instructorName: '',
   instructions:
     'INSTRUCTIONS:\n1. Read the instructions for each type of exam carefully. you have one and a half (1.5) hours to answer this exam.\nIf you have questions, please raise them to the proctor only.\n\nMultiple Choice: Shade the circle corresponding to the letter of your answer in the test paper. Use only a black or blue ballpoint pen for shading. Refrain from using pencils and erasers, as any corrections or unshaded answers will be considered incorrect.',
+  font: 'Arial',
+  fontSize: 10,
   templateFile: null,
   templateFileName: null,
 }

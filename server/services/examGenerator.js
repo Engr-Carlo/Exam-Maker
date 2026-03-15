@@ -19,11 +19,13 @@ try {
   // Header image not available (e.g. Vercel serverless) - continue without it
 }
 
-const FONT = 'Arial';
-const FONT_SIZE = 20; // half-points (20 = 10pt)
+const DEFAULT_FONT = 'Arial';
+const DEFAULT_FONT_SIZE = 20; // half-points (20 = 10pt)
 const FONT_SIZE_SMALL = 18; // 9pt for signature area
 
 function buildExamDoc({ config, questions }) {
+  const FONT = config.font || DEFAULT_FONT;
+  const FONT_SIZE = (config.fontSize || 10) * 2; // convert pt to half-points
   const headerImageBuffer = HEADER_IMAGE_BUFFER;
 
   // -- Build header image paragraph --
@@ -146,7 +148,7 @@ function buildExamDoc({ config, questions }) {
   for (let pageIdx = 0; pageIdx < pageChunks.length; pageIdx++) {
     const chunk = pageChunks[pageIdx];
     const startNum = pageIdx * ITEMS_PER_PAGE + 1;
-    const qParagraphs = buildQuestionParagraphs(chunk, startNum);
+    const qParagraphs = buildQuestionParagraphs(chunk, startNum, FONT, FONT_SIZE);
     const isLast = pageIdx === pageChunks.length - 1;
 
     if (pageIdx === 0) {
@@ -251,7 +253,7 @@ function buildExamDoc({ config, questions }) {
   return doc;
 }
 
-function buildQuestionParagraphs(questions, startNum = 1) {
+function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, fontSize = DEFAULT_FONT_SIZE) {
   const paragraphs = [];
 
   for (let i = 0; i < questions.length; i++) {
@@ -259,32 +261,33 @@ function buildQuestionParagraphs(questions, startNum = 1) {
     const num = startNum + i;
     const choices = ['A', 'B', 'C', 'D'];
 
-    // Question text with spacing after for 1 line gap between items
+    // Question text — small gap before each question for readability
     paragraphs.push(
       new Paragraph({
-        spacing: { before: 200, after: 40 },
+        spacing: { before: 80, after: 20 },
         children: [
-          new TextRun({ text: `${num}. `, bold: false, size: FONT_SIZE, font: FONT }),
-          new TextRun({ text: q.questionText, size: FONT_SIZE, font: FONT }),
+          new TextRun({ text: `${num}. `, bold: false, size: fontSize, font }),
+          new TextRun({ text: q.questionText, size: fontSize, font }),
         ],
       })
     );
 
-    // Choices
+    // Choices — tight spacing
     for (let c = 0; c < choices.length; c++) {
       const letter = choices[c];
       const choiceText = q[`choice${letter}`] || '';
       const isCorrect = q.correctAnswer === letter;
+      const isLast = c === choices.length - 1;
 
       paragraphs.push(
         new Paragraph({
-          spacing: { after: 20 },
-          indent: { left: convertInchesToTwip(0.25) },
+          spacing: { after: isLast ? 80 : 0 },
+          indent: { left: convertInchesToTwip(0.2) },
           children: [
             new TextRun({
               text: `${letter}) ${choiceText}`,
-              size: FONT_SIZE,
-              font: FONT,
+              size: fontSize,
+              font,
               color: isCorrect ? 'FF0000' : '000000',
             }),
           ],
@@ -320,7 +323,7 @@ function buildSignatureFooter() {
         children: [
           new Paragraph({
             spacing: { after: 20 },
-            children: [new TextRun({ text: r.label, size: FONT_SIZE_SMALL, font: FONT })],
+            children: [new TextRun({ text: r.label, size: FONT_SIZE_SMALL, font: DEFAULT_FONT })],
           }),
         ],
       })
@@ -336,13 +339,13 @@ function buildSignatureFooter() {
         alignment: AlignmentType.CENTER,
         spacing: { after: 20 },
         children: [
-          new TextRun({ text: 'Signature over Printed Name', bold: true, size: FONT_SIZE_SMALL, font: FONT }),
+          new TextRun({ text: 'Signature over Printed Name', bold: true, size: FONT_SIZE_SMALL, font: DEFAULT_FONT }),
         ],
       }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
         children: [
-          new TextRun({ text: r.title, italics: true, size: FONT_SIZE_SMALL, font: FONT }),
+          new TextRun({ text: r.title, italics: true, size: FONT_SIZE_SMALL, font: DEFAULT_FONT }),
         ],
       })
     );
@@ -363,7 +366,7 @@ function buildSignatureFooter() {
         width: { size: 25, type: WidthType.PERCENTAGE },
         children: [
           new Paragraph({
-            children: [new TextRun({ text: 'Date:', size: FONT_SIZE_SMALL, font: FONT })],
+            children: [new TextRun({ text: 'Date:', size: FONT_SIZE_SMALL, font: DEFAULT_FONT })],
           }),
         ],
       })
