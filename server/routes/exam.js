@@ -15,8 +15,9 @@ router.post('/export', async (req, res) => {
     }
 
     let buffer;
+    const hasQuestionImages = Array.isArray(questions) && questions.some((q) => typeof q.image === 'string' && q.image.startsWith('data:image/'));
 
-    if (templateFile) {
+    if (templateFile && !hasQuestionImages) {
       // Template-based export: inject questions into the uploaded template
       const base64Data = templateFile.replace(/^data:[^;]+;base64,/, '');
       const templateBuffer = Buffer.from(base64Data, 'base64');
