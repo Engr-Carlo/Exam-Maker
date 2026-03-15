@@ -7,6 +7,7 @@ const EMPTY_FORM = {
   topic: '',
   cognitiveLevel: '',
   questionText: '',
+  image: '',
   choiceA: '',
   choiceB: '',
   choiceC: '',
@@ -135,9 +136,35 @@ export default function QuestionForm({ editingQuestion, onDone }) {
           rows={3}
           value={form.questionText}
           onChange={(e) => update('questionText', e.target.value)}
+          onPaste={(e) => {
+            const items = e.clipboardData?.items
+            if (!items) return
+            for (const item of items) {
+              if (item.type.startsWith('image/')) {
+                e.preventDefault()
+                const file = item.getAsFile()
+                const reader = new FileReader()
+                reader.onload = (ev) => update('image', ev.target.result)
+                reader.readAsDataURL(file)
+                return
+              }
+            }
+          }}
           className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition resize-none"
-          placeholder="Enter the question..."
+          placeholder="Enter the question... (you can also paste an image here)"
         />
+        {form.image && (
+          <div className="mt-2 relative inline-block">
+            <img src={form.image} alt="Question" className="max-h-40 rounded-lg border border-gray-200" />
+            <button
+              type="button"
+              onClick={() => update('image', '')}
+              className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow"
+            >
+              ×
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Choices section */}

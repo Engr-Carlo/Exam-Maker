@@ -256,6 +256,16 @@ function buildExamDoc({ config, questions }) {
           },
         },
       },
+      paragraphStyles: [
+        {
+          id: 'Normal',
+          name: 'Normal',
+          run: {
+            font: FONT,
+            size: FONT_SIZE,
+          },
+        },
+      ],
     },
     sections: pages,
   });
@@ -265,6 +275,7 @@ function buildExamDoc({ config, questions }) {
 
 function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, fontSize = DEFAULT_FONT_SIZE) {
   const paragraphs = [];
+  const INDENT = 432; // 0.3 inches in twips
 
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
@@ -275,13 +286,36 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
     paragraphs.push(
       new Paragraph({
         spacing: { before: 80, after: 20 },
-        indent: { left: convertInchesToTwip(0.3), hanging: convertInchesToTwip(0.3) },
+        indent: { left: INDENT, hanging: INDENT },
         children: [
           new TextRun({ text: `${num}. `, bold: false, size: fontSize, font }),
           new TextRun({ text: q.questionText, size: fontSize, font }),
         ],
       })
     );
+
+    // If question has an image, add it after the question text
+    if (q.image) {
+      try {
+        const base64Data = q.image.replace(/^data:image\/[^;]+;base64,/, '');
+        const imgBuffer = Buffer.from(base64Data, 'base64');
+        paragraphs.push(
+          new Paragraph({
+            spacing: { after: 40 },
+            indent: { left: INDENT },
+            children: [
+              new ImageRun({
+                data: imgBuffer,
+                transformation: { width: 300, height: 200 },
+                type: 'png',
+              }),
+            ],
+          })
+        );
+      } catch {
+        // Skip image if it fails to parse
+      }
+    }
 
     // Choices — tight spacing, same indent level as question text
     for (let c = 0; c < choices.length; c++) {
@@ -293,7 +327,7 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
       paragraphs.push(
         new Paragraph({
           spacing: { after: isLast ? 80 : 0 },
-          indent: { left: convertInchesToTwip(0.3) },
+          indent: { left: INDENT },
           children: [
             new TextRun({
               text: `${letter}) ${choiceText}`,
