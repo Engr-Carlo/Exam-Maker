@@ -8,15 +8,23 @@ const {
 const fs = require('fs');
 const path = require('path');
 
-const HEADER_IMAGE_PATH = path.join(__dirname, '..', 'assets', 'header.png');
+// Load header image at module init time - use try/catch for Vercel compatibility
+let HEADER_IMAGE_BUFFER = null;
+try {
+  const headerPath = path.join(__dirname, '..', 'assets', 'header.png');
+  if (fs.existsSync(headerPath)) {
+    HEADER_IMAGE_BUFFER = fs.readFileSync(headerPath);
+  }
+} catch {
+  // Header image not available (e.g. Vercel serverless) - continue without it
+}
+
 const FONT = 'Arial';
 const FONT_SIZE = 20; // half-points (20 = 10pt)
 const FONT_SIZE_SMALL = 18; // 9pt for signature area
 
 function buildExamDoc({ config, questions }) {
-  const headerImageBuffer = fs.existsSync(HEADER_IMAGE_PATH)
-    ? fs.readFileSync(HEADER_IMAGE_PATH)
-    : null;
+  const headerImageBuffer = HEADER_IMAGE_BUFFER;
 
   // -- Build header image paragraph --
   const headerParagraphs = [];

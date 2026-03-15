@@ -14,17 +14,28 @@ export default function ReviewExport() {
     setExporting(true)
     setError('')
     try {
-      // Strip large binary blobs from config before sending
-      const { templateFile, templateFileName, ...configForApi } = config
+      // Only send the fields the server needs - strip all binary blobs from config
+      const cleanConfig = {
+        universityName: config.universityName,
+        college: config.college,
+        address: config.address,
+        courseCode: config.courseCode,
+        courseTitle: config.courseTitle,
+        semester: config.semester,
+        academicYear: config.academicYear,
+        examType: config.examType,
+        instructorName: config.instructorName,
+        instructions: config.instructions,
+      }
 
       const payload = {
-        config: configForApi,
+        config: cleanConfig,
         questions,
         format: 'docx',
       }
 
-      if (templateFile) {
-        payload.templateFile = templateFile
+      if (config.templateFile) {
+        payload.templateFile = config.templateFile
       }
 
       const res = await axios.post(
@@ -45,7 +56,17 @@ export default function ReviewExport() {
       a.remove()
       window.URL.revokeObjectURL(url)
     } catch (err) {
-      setError('Export failed. ' + (err.response?.data?.error || err.message))
+      let msg = err.message
+      if (err.response?.data) {
+        try {
+          const text = await err.response.data.text()
+          const json = JSON.parse(text)
+          msg = json.error || text
+        } catch {
+          msg = 'Server error'
+        }
+      }
+      setError('Export failed: ' + msg)
     } finally {
       setExporting(false)
     }
