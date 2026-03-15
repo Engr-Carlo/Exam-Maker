@@ -18,7 +18,12 @@ function buildColMap(headerRow) {
   for (let j = 0; j < headerRow.length; j++) {
     const cell = headerRow[j];
     if (cell === 'TOPIC') colMap.topic = j;
-    if (cell === 'TOTAL' || cell.includes('TOTAL') || cell.includes('NO. OF') || cell.includes('NUM OF') || cell.includes('NUMBER OF')) colMap.total = j;
+    const isHoursCol = cell.includes('TEACHING') || cell.includes('HOURS');
+    const isTotalCol =
+      cell === 'TOTAL' ||
+      /\bTOTAL\b/.test(cell) ||
+      /\b(NO\.?\s*OF|NUM(?:BER)?\s*OF)\s*(TEST\s*)?ITEMS?\b/.test(cell);
+    if (isTotalCol && !isHoursCol) colMap.total = j;
     if (cell.includes('TEACHING') || cell.includes('HOURS')) colMap.hours = j;
     if (cell.includes('COMMENT') || cell.includes('REMARK')) colMap.comments = j;
     for (const level of cogLevels) {
@@ -28,6 +33,46 @@ function buildColMap(headerRow) {
     }
   }
   return colMap;
+}
+
+function detectTotalColumn(rows, dataStartRow, colMap) {
+  const topicRows = [];
+  for (let i = dataStartRow; i < rows.length; i++) {
+    const row = rows[i];
+    const topicName = String(row[colMap.topic] || '').trim();
+    if (!topicName || /^\d+$/.test(String(row[0] || '').trim())) continue;
+    if (topicName.toUpperCase() === 'TOTAL') break;
+    topicRows.push(row);
+  }
+
+  const hasNumericTotals = (colIdx) => {
+    if (colIdx === undefined || colIdx === null) return false;
+    let count = 0;
+    for (const row of topicRows) {
+      const val = parseInt(row[colIdx], 10);
+      if (Number.isFinite(val) && val > 0) count++;
+    }
+    return count >= 2;
+  };
+
+  // If existing total col is valid and not hours, use it
+  if (colMap.total !== undefined && colMap.total !== colMap.hours && hasNumericTotals(colMap.total)) {
+    return colMap.total;
+  }
+
+  // User's format: totals are in Excel column Q (index 16), e.g., Q17..Q21
+  const Q_COL_INDEX = 16;
+  if (hasNumericTotals(Q_COL_INDEX)) {
+    return Q_COL_INDEX;
+  }
+
+  // Common format: total is right before hours
+  if (colMap.hours !== undefined && colMap.hours > 0 && hasNumericTotals(colMap.hours - 1)) {
+    return colMap.hours - 1;
+  }
+
+  // Last fallback: keep whatever was mapped
+  return colMap.total;
 }
 
 function findDataStartRow(rows, headerRowIndex, colMap) {
@@ -108,6 +153,7 @@ function parseTOS(filePath) {
   const headerRow1 = rows1[headerRowIndex1].map(c => String(c).trim().toUpperCase());
   const colMap1 = buildColMap(headerRow1);
   const dataStart1 = findDataStartRow(rows1, headerRowIndex1, colMap1);
+  const resolvedTotalCol = detectTotalColumn(rows1, dataStart1, colMap1);
   const meta = extractMetadata(rows1, headerRowIndex1);
 
   const topics = [];
@@ -125,7 +171,7 @@ function parseTOS(filePath) {
       analyzing: parseInt(row[colMap1.analyzing]) || 0,
       evaluating: parseInt(row[colMap1.evaluating]) || 0,
       creating: parseInt(row[colMap1.creating]) || 0,
-      total: parseInt(row[colMap1.total]) || 0,
+      total: parseInt(row[resolvedTotalCol]) || 0,
       teachingHours: parseFloat(row[colMap1.hours]) || 0,
       // Will be filled from sheet 2
       itemRanges: {},
