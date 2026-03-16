@@ -136,6 +136,29 @@ export function ExamProvider({ children }) {
     localStorage.removeItem(STORAGE_KEY)
   }
 
+  const importExamData = (data) => {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid backup file.')
+    }
+
+    const importedTos = data.tos || null
+    const importedConfig = data.config || {}
+    const importedQuestions = Array.isArray(data.questions)
+      ? data.questions.map((q, idx) => ({
+          ...q,
+          id: q?.id || `${Date.now()}-${idx}`,
+        }))
+      : []
+
+    setTos(importedTos)
+    setConfig({
+      ...DEFAULT_CONFIG,
+      ...importedConfig,
+    })
+    setQuestions(importedQuestions)
+    setCurrentStep(2)
+  }
+
   return (
     <ExamContext.Provider
       value={{
@@ -153,6 +176,7 @@ export function ExamProvider({ children }) {
         currentStep,
         setCurrentStep,
         resetAll,
+        importExamData,
       }}
     >
       {children}
