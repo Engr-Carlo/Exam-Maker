@@ -328,12 +328,6 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
       const allRows = [headers, ...(rows || [])];
       const TABLE_FONT_SIZE = 16; // 8pt in half-points
       const HEADER_COLOR = '2E4057'; // dark navy
-      const cellBorder = {
-        top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
-        bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
-        left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
-        right: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
-      };
       const tableBorders = {
         top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
         bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
@@ -352,10 +346,9 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
             new TableRow({
               children: row.map((cell) =>
                 new TableCell({
-                  borders: cellBorder,
                   shading: ri === 0
                     ? { type: ShadingType.CLEAR, fill: HEADER_COLOR, color: 'auto' }
-                    : undefined,
+                    : { type: ShadingType.CLEAR, fill: 'FFFFFF', color: 'auto' },
                   children: [
                     new Paragraph({
                       spacing: { before: 20, after: 20 },

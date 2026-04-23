@@ -16,14 +16,6 @@ function buildTableXml(table) {
   const cols = headers.length;
   const HEADER_COLOR = '2E4057';
 
-  const borderXml =
-    '<w:tcBorders>' +
-    '<w:top w:val="single" w:sz="4" w:color="000000"/>' +
-    '<w:bottom w:val="single" w:sz="4" w:color="000000"/>' +
-    '<w:left w:val="single" w:sz="4" w:color="000000"/>' +
-    '<w:right w:val="single" w:sz="4" w:color="000000"/>' +
-    '</w:tcBorders>';
-
   const tblBordersXml =
     '<w:tblBorders>' +
     '<w:top w:val="single" w:sz="4" w:color="000000"/>' +
@@ -35,7 +27,7 @@ function buildTableXml(table) {
     '</w:tblBorders>';
 
   let tbl = '<w:tbl>';
-  tbl += `<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblInd w:w="432" w:type="dxa"/>${tblBordersXml}</w:tblPr>`;
+  tbl += `<w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblInd w:w="432" w:type="dxa"/>${tblBordersXml}</w:tblPr>`;
   tbl += `<w:tblGrid>${Array(cols).fill('<w:gridCol/>').join('')}</w:tblGrid>`;
 
   for (const { cells, isHeader } of allRows) {
@@ -46,12 +38,13 @@ function buildTableXml(table) {
       const shadingXml = isHeader
         ? `<w:shd w:val="clear" w:color="auto" w:fill="${HEADER_COLOR}"/>`
         : '';
+      const tcPrContent = shadingXml ? `<w:tcPr>${shadingXml}</w:tcPr>` : '';
       const rPr = isHeader
         ? `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>`
         : `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:color w:val="000000"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>`;
       const pPr = `<w:pPr><w:spacing w:before="20" w:after="20"/></w:pPr>`;
       tbl +=
-        `<w:tc><w:tcPr>${borderXml}${shadingXml}</w:tcPr>` +
+        `<w:tc>${tcPrContent}` +
         `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(cell || '')}</w:t></w:r></w:p></w:tc>`;
     }
     tbl += '</w:tr>';
