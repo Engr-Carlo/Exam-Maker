@@ -9,6 +9,8 @@ const EMPTY_FORM = {
   cognitiveLevel: '',
   questionText: '',
   image: '',
+  imageWidth: 0,
+  imageHeight: 0,
   table: null,
   choiceA: '',
   choiceB: '',
@@ -146,7 +148,19 @@ export default function QuestionForm({ editingQuestion, onDone }) {
                 e.preventDefault()
                 const file = item.getAsFile()
                 const reader = new FileReader()
-                reader.onload = (ev) => update('image', ev.target.result)
+                reader.onload = (ev) => {
+                  const dataUrl = ev.target.result
+                  const img = new window.Image()
+                  img.onload = () => {
+                    setForm((prev) => ({
+                      ...prev,
+                      image: dataUrl,
+                      imageWidth: img.naturalWidth,
+                      imageHeight: img.naturalHeight,
+                    }))
+                  }
+                  img.src = dataUrl
+                }
                 reader.readAsDataURL(file)
                 return
               }
@@ -160,7 +174,7 @@ export default function QuestionForm({ editingQuestion, onDone }) {
             <img src={form.image} alt="Question" className="max-h-40 rounded-lg border border-gray-200" />
             <button
               type="button"
-              onClick={() => update('image', '')}
+              onClick={() => setForm((prev) => ({ ...prev, image: '', imageWidth: 0, imageHeight: 0 }))}
               className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow"
             >
               ×

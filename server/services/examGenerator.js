@@ -304,6 +304,11 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
       try {
         const base64Data = q.image.replace(/^data:image\/[^;]+;base64,/, '');
         const imgBuffer = Buffer.from(base64Data, 'base64');
+        const MAX_IMG_WIDTH = 240;
+        const srcW = q.imageWidth || MAX_IMG_WIDTH;
+        const srcH = q.imageHeight || MAX_IMG_WIDTH;
+        const imgWidth = Math.min(srcW, MAX_IMG_WIDTH);
+        const imgHeight = Math.round(imgWidth * (srcH / srcW));
         paragraphs.push(
           new Paragraph({
             spacing: { after: 40 },
@@ -311,7 +316,7 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
             children: [
               new ImageRun({
                 data: imgBuffer,
-                transformation: { width: 300, height: 200 },
+                transformation: { width: imgWidth, height: imgHeight },
                 type: 'png',
               }),
             ],
