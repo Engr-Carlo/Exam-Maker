@@ -16,10 +16,36 @@ function normalizeLevel(str) {
   return COGNITIVE_LEVELS.find((l) => l.toLowerCase() === lower) || ''
 }
 
+function parseTable(tableLines) {
+  // Filter out pure separator lines like |---|---|
+  const dataLines = tableLines.filter((l) => !/^\|?[\s\-|]+\|?$/.test(l))
+  if (dataLines.length === 0) return null
+
+  const parseRow = (line) =>
+    line
+      .split('|')
+      .map((c) => c.trim())
+      .filter((_, i, arr) => i > 0 || arr[0] !== '') // strip empty leading/trailing from pipe edges
+      .filter((c, i, arr) => !(i === arr.length - 1 && c === ''))
+
+  const headers = parseRow(dataLines[0])
+  const rows = dataLines.slice(1).map(parseRow)
+  // Normalise row lengths
+  const cols = headers.length
+  const normRows = rows.map((r) => {
+    const out = [...r]
+    while (out.length < cols) out.push('')
+    return out.slice(0, cols)
+  })
+  return { headers, rows: normRows }
+}
+
 function parseBulkText(text) {
   const lines = text.split('\n')
   const questions = []
   let current = null
+  let tableLines = []
+  let collectingTable = false
 
   for (const rawLine of lines) {
     const line = rawLine.trim()
@@ -28,11 +54,20 @@ function parseBulkText(text) {
     const choiceMatch = line.match(/^([A-Da-d])[.)\-\s]+\s*(.+)/)
     const answerMatch = line.match(/^answer\s*:\s*([A-Da-d])/i)
     const cogMatch = line.match(/^cognitive\s*:\s*(.+)/i)
+    const isPipeLine = line.includes('|')
 
     if (qMatch) {
-      if (current) questions.push(current)
+      if (current) {
+        if (collectingTable && tableLines.length) {
+          current.table = parseTable(tableLines)
+        }
+        questions.push(current)
+      }
+      tableLines = []
+      collectingTable = false
       current = {
         questionText: qMatch[1].trim(),
+        table: null,
         choiceA: '',
         choiceB: '',
         choiceC: '',
@@ -41,7 +76,16 @@ function parseBulkText(text) {
         cognitiveLevel: '',
         image: '',
       }
+    } else if (isPipeLine && current && !current.choiceA) {
+      // Table lines come before choices
+      tableLines.push(line)
+      collectingTable = true
     } else if (choiceMatch && current) {
+      // First choice encountered — finalise table if collecting
+      if (collectingTable && tableLines.length) {
+        current.table = parseTable(tableLines)
+        collectingTable = false
+      }
       const letter = choiceMatch[1].toUpperCase()
       const key = `choice${letter}`
       if (key in current) current[key] = choiceMatch[2].trim()
@@ -52,7 +96,12 @@ function parseBulkText(text) {
     }
   }
 
-  if (current) questions.push(current)
+  if (current) {
+    if (collectingTable && tableLines.length) {
+      current.table = parseTable(tableLines)
+    }
+    questions.push(current)
+  }
   return questions
 }
 
@@ -154,8 +203,10 @@ cognitive: understanding`
 
       {/* Format hint */}
       <div className="bg-blue-50 rounded-xl px-4 py-3 text-xs text-blue-700 font-mono leading-relaxed">
-        <p className="font-semibold text-blue-800 mb-1 font-sans">Expected format:</p>
+        <p className="font-semibold text-blue-800 mb-1 font-sans">Expected format (table is optional):</p>
         <p>1. Question text here</p>
+        <p className="text-blue-500">Col A  | Col B  | Col C</p>
+        <p className="text-blue-500">val 1  | val 2  | val 3</p>
         <p>A. Choice one</p>
         <p>B. Choice two</p>
         <p>C. Choice three</p>
@@ -210,6 +261,32 @@ cognitive: understanding`
                 <p className="font-semibold mb-1">
                   {i + 1}. {item.questionText}
                 </p>
+                {item.table && (
+                  <div className="overflow-x-auto my-2">
+                    <table className="text-xs border-collapse border border-gray-300">
+                      <thead>
+                        <tr>
+                          {item.table.headers.map((h, ci) => (
+                            <th key={ci} className="border border-gray-300 px-2 py-1 bg-gray-200 font-semibold text-gray-700">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {item.table.rows.map((row, ri) => (
+                          <tr key={ri}>
+                            {row.map((cell, ci) => (
+                              <td key={ci} className="border border-gray-300 px-2 py-1 text-gray-600">
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 {['A','B','C','D'].map((letter) => {
                   const isAnswer = letter === item.correctAnswer
                   return (

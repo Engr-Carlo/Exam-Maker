@@ -9,6 +9,42 @@ function escapeXml(str) {
     .replace(/'/g, '&apos;');
 }
 
+function buildTableXml(table) {
+  if (!table || !Array.isArray(table.headers) || table.headers.length === 0) return '';
+  const { headers, rows } = table;
+  const allRows = [{ cells: headers, isHeader: true }, ...(rows || []).map((r) => ({ cells: r, isHeader: false }))];
+  const cols = headers.length;
+
+  const borderXml =
+    '<w:tcBorders>' +
+    '<w:top w:val="single" w:sz="4" w:color="000000"/>' +
+    '<w:bottom w:val="single" w:sz="4" w:color="000000"/>' +
+    '<w:left w:val="single" w:sz="4" w:color="000000"/>' +
+    '<w:right w:val="single" w:sz="4" w:color="000000"/>' +
+    '</w:tcBorders>';
+
+  let tbl = '<w:tbl>';
+  tbl += '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblInd w:w="432" w:type="dxa"/></w:tblPr>';
+  tbl += `<w:tblGrid>${Array(cols).fill('<w:gridCol/>').join('')}</w:tblGrid>`;
+
+  for (const { cells, isHeader } of allRows) {
+    tbl += '<w:tr>';
+    const normalised = [...cells];
+    while (normalised.length < cols) normalised.push('');
+    for (const cell of normalised.slice(0, cols)) {
+      const rPr = isHeader
+        ? '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>'
+        : '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+      tbl +=
+        `<w:tc><w:tcPr>${borderXml}</w:tcPr>` +
+        `<w:p><w:r>${rPr}<w:t xml:space="preserve">${escapeXml(cell || '')}</w:t></w:r></w:p></w:tc>`;
+    }
+    tbl += '</w:tr>';
+  }
+  tbl += '</w:tbl>';
+  return tbl;
+}
+
 /**
  * Build OOXML paragraphs for all questions.
  * Enforces Arial 10pt and consistent indenting regardless of template defaults.
@@ -28,6 +64,12 @@ function buildQuestionsXml(questions) {
       `<w:r>${FONT_RPR}<w:t xml:space="preserve">${escapeXml(`${num}.`)}</w:t></w:r>` +
       `<w:r>${FONT_RPR}<w:tab/></w:r>` +
       `<w:r>${FONT_RPR}<w:t xml:space="preserve">${escapeXml(q.questionText || '')}</w:t></w:r></w:p>`;
+
+    // Optional table after question text
+    if (q.table) {
+      xml += buildTableXml(q.table);
+      xml += '<w:p><w:pPr><w:spacing w:after="40"/></w:pPr></w:p>';
+    }
 
     // Choice paragraphs: same left indent as question text
     for (const letter of ['A', 'B', 'C', 'D']) {

@@ -321,6 +321,49 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
       }
     }
 
+    // If question has a table, render it after the question text / image
+    if (q.table && Array.isArray(q.table.headers) && q.table.headers.length > 0) {
+      const { headers, rows } = q.table;
+      const allRows = [headers, ...(rows || [])];
+      const cellBorder = {
+        top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+        left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+        right: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      };
+
+      paragraphs.push(
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          indent: { size: INDENT, type: WidthType.DXA },
+          rows: allRows.map((row, ri) =>
+            new TableRow({
+              children: row.map((cell) =>
+                new TableCell({
+                  borders: cellBorder,
+                  children: [
+                    new Paragraph({
+                      spacing: { after: 0 },
+                      children: [
+                        new TextRun({
+                          text: cell || '',
+                          bold: ri === 0,
+                          size: fontSize,
+                          font,
+                        }),
+                      ],
+                    }),
+                  ],
+                })
+              ),
+            })
+          ),
+        })
+      );
+      // Small gap after table before choices
+      paragraphs.push(new Paragraph({ spacing: { after: 40 } }));
+    }
+
     // Choices — tight spacing, same indent level as question text
     for (let c = 0; c < choices.length; c++) {
       const letter = choices[c];

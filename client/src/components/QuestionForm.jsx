@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { useExam } from '../context/ExamContext'
+import TableEditor from './TableEditor'
 
 const COG_LEVELS = ['Remembering', 'Understanding', 'Applying', 'Analyzing', 'Evaluating', 'Creating']
 
@@ -8,6 +9,7 @@ const EMPTY_FORM = {
   cognitiveLevel: '',
   questionText: '',
   image: '',
+  table: null,
   choiceA: '',
   choiceB: '',
   choiceC: '',
@@ -166,6 +168,9 @@ export default function QuestionForm({ editingQuestion, onDone }) {
           </div>
         )}
       </div>
+
+      {/* Table (optional) */}
+      <TableEditor value={form.table} onChange={(t) => update('table', t)} />
 
       {/* Choices section */}
       <div>
