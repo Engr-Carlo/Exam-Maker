@@ -334,11 +334,20 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
         left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
         right: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
       };
+      const tableBorders = {
+        top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+        left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+        right: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+        insideH: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+        insideV: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      };
 
       paragraphs.push(
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
           indent: { size: INDENT, type: WidthType.DXA },
+          borders: tableBorders,
           rows: allRows.map((row, ri) =>
             new TableRow({
               children: row.map((cell) =>

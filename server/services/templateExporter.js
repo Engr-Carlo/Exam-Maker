@@ -24,8 +24,18 @@ function buildTableXml(table) {
     '<w:right w:val="single" w:sz="4" w:color="000000"/>' +
     '</w:tcBorders>';
 
+  const tblBordersXml =
+    '<w:tblBorders>' +
+    '<w:top w:val="single" w:sz="4" w:color="000000"/>' +
+    '<w:left w:val="single" w:sz="4" w:color="000000"/>' +
+    '<w:bottom w:val="single" w:sz="4" w:color="000000"/>' +
+    '<w:right w:val="single" w:sz="4" w:color="000000"/>' +
+    '<w:insideH w:val="single" w:sz="4" w:color="000000"/>' +
+    '<w:insideV w:val="single" w:sz="4" w:color="000000"/>' +
+    '</w:tblBorders>';
+
   let tbl = '<w:tbl>';
-  tbl += '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblInd w:w="432" w:type="dxa"/></w:tblPr>';
+  tbl += `<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblInd w:w="432" w:type="dxa"/>${tblBordersXml}</w:tblPr>`;
   tbl += `<w:tblGrid>${Array(cols).fill('<w:gridCol/>').join('')}</w:tblGrid>`;
 
   for (const { cells, isHeader } of allRows) {
