@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useExam } from '../context/ExamContext'
 import QuestionForm from '../components/QuestionForm'
+import BulkQuestionPaste from '../components/BulkQuestionPaste'
 import QuestionList from '../components/QuestionList'
 import TosComplianceDashboard from '../components/TosComplianceDashboard'
 
@@ -9,6 +10,7 @@ export default function QuestionManager() {
   const { questions, tos, config, importExamData } = useExam()
   const navigate = useNavigate()
   const [showDashboard, setShowDashboard] = useState(true)
+  const [activeTab, setActiveTab] = useState('single')
   const fileInputRef = useRef(null)
 
   const totalRequired = tos?.totals?.grandTotal || 0
@@ -100,7 +102,31 @@ export default function QuestionManager() {
       <div className={`grid gap-6 ${showDashboard ? 'lg:grid-cols-[1fr_340px]' : ''}`}>
         {/* Left: Form + List */}
         <div className="space-y-6">
-          <QuestionForm />
+          {/* Tabs */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('single')}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold transition ${
+                activeTab === 'single'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Single Question
+            </button>
+            <button
+              onClick={() => setActiveTab('multiple')}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold transition ${
+                activeTab === 'multiple'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Multiple Questions
+            </button>
+          </div>
+
+          {activeTab === 'single' ? <QuestionForm /> : <BulkQuestionPaste />}
           <QuestionList />
 
           {/* Nav buttons */}
