@@ -5,6 +5,7 @@ const {
   SectionType, convertInchesToTwip,
   TabStopType,
   TableLayoutType,
+  ShadingType,
 } = require('docx');
 const fs = require('fs');
 const path = require('path');
@@ -325,6 +326,8 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
     if (q.table && Array.isArray(q.table.headers) && q.table.headers.length > 0) {
       const { headers, rows } = q.table;
       const allRows = [headers, ...(rows || [])];
+      const TABLE_FONT_SIZE = 16; // 8pt in half-points
+      const HEADER_COLOR = '2E4057'; // dark navy
       const cellBorder = {
         top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
         bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
@@ -341,14 +344,18 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
               children: row.map((cell) =>
                 new TableCell({
                   borders: cellBorder,
+                  shading: ri === 0
+                    ? { type: ShadingType.CLEAR, fill: HEADER_COLOR, color: 'auto' }
+                    : undefined,
                   children: [
                     new Paragraph({
-                      spacing: { after: 0 },
+                      spacing: { before: 20, after: 20 },
                       children: [
                         new TextRun({
                           text: cell || '',
                           bold: ri === 0,
-                          size: fontSize,
+                          color: ri === 0 ? 'FFFFFF' : '000000',
+                          size: TABLE_FONT_SIZE,
                           font,
                         }),
                       ],
@@ -361,7 +368,7 @@ function buildQuestionParagraphs(questions, startNum = 1, font = DEFAULT_FONT, f
         })
       );
       // Small gap after table before choices
-      paragraphs.push(new Paragraph({ spacing: { after: 40 } }));
+      paragraphs.push(new Paragraph({ spacing: { after: 60 } }));
     }
 
     // Choices — tight spacing, same indent level as question text

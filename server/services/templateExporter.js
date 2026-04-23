@@ -14,6 +14,7 @@ function buildTableXml(table) {
   const { headers, rows } = table;
   const allRows = [{ cells: headers, isHeader: true }, ...(rows || []).map((r) => ({ cells: r, isHeader: false }))];
   const cols = headers.length;
+  const HEADER_COLOR = '2E4057';
 
   const borderXml =
     '<w:tcBorders>' +
@@ -32,12 +33,16 @@ function buildTableXml(table) {
     const normalised = [...cells];
     while (normalised.length < cols) normalised.push('');
     for (const cell of normalised.slice(0, cols)) {
+      const shadingXml = isHeader
+        ? `<w:shd w:val="clear" w:color="auto" w:fill="${HEADER_COLOR}"/>`
+        : '';
       const rPr = isHeader
-        ? '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>'
-        : '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+        ? `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>`
+        : `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:color w:val="000000"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>`;
+      const pPr = `<w:pPr><w:spacing w:before="20" w:after="20"/></w:pPr>`;
       tbl +=
-        `<w:tc><w:tcPr>${borderXml}</w:tcPr>` +
-        `<w:p><w:r>${rPr}<w:t xml:space="preserve">${escapeXml(cell || '')}</w:t></w:r></w:p></w:tc>`;
+        `<w:tc><w:tcPr>${borderXml}${shadingXml}</w:tcPr>` +
+        `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(cell || '')}</w:t></w:r></w:p></w:tc>`;
     }
     tbl += '</w:tr>';
   }
