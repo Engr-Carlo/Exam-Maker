@@ -25,23 +25,28 @@ function parseBulkText(text) {
     const line = rawLine.trim()
 
     const qMatch = line.match(/^\d+\.\s+(.+)/)
-    const choiceMatch = line.match(/^([A-Da-d])[.)]\s+(.+)/)
+    const choiceMatch = line.match(/^([A-Da-d])[.)\-\s]+\s*(.+)/)
     const answerMatch = line.match(/^answer\s*:\s*([A-Da-d])/i)
     const cogMatch = line.match(/^cognitive\s*:\s*(.+)/i)
 
     if (qMatch) {
       if (current) questions.push(current)
       current = {
-        question: qMatch[1].trim(),
-        choices: ['', '', '', ''],
-        answer: '',
+        questionText: qMatch[1].trim(),
+        choiceA: '',
+        choiceB: '',
+        choiceC: '',
+        choiceD: '',
+        correctAnswer: '',
         cognitiveLevel: '',
+        image: '',
       }
     } else if (choiceMatch && current) {
-      const idx = choiceMatch[1].toUpperCase().charCodeAt(0) - 65
-      if (idx >= 0 && idx <= 3) current.choices[idx] = choiceMatch[2].trim()
+      const letter = choiceMatch[1].toUpperCase()
+      const key = `choice${letter}`
+      if (key in current) current[key] = choiceMatch[2].trim()
     } else if (answerMatch && current) {
-      current.answer = answerMatch[1].toUpperCase()
+      current.correctAnswer = answerMatch[1].toUpperCase()
     } else if (cogMatch && current) {
       current.cognitiveLevel = normalizeLevel(cogMatch[1])
     }
@@ -72,10 +77,10 @@ export default function BulkQuestionPaste() {
 
     items.forEach((item, i) => {
       const num = i + 1
-      if (!item.question) errs.push(`Q${num}: missing question text.`)
-      const missingChoices = item.choices.map((c, ci) => (!c ? String.fromCharCode(65 + ci) : null)).filter(Boolean)
+      if (!item.questionText) errs.push(`Q${num}: missing question text.`)
+      const missingChoices = ['A','B','C','D'].filter((l) => !item[`choice${l}`])
       if (missingChoices.length) errs.push(`Q${num}: missing choice(s): ${missingChoices.join(', ')}.`)
-      if (!item.answer) errs.push(`Q${num}: missing answer line (e.g. "answer: c").`)
+      if (!item.correctAnswer) errs.push(`Q${num}: missing answer line (e.g. "answer: c").`)
       if (!item.cognitiveLevel) errs.push(`Q${num}: unrecognized cognitive level. Use one of: ${COGNITIVE_LEVELS.join(', ')}.`)
     })
 
@@ -86,7 +91,7 @@ export default function BulkQuestionPaste() {
   const handleAddAll = () => {
     if (!topic || parseErrors.length > 0 || !parsed) return
     parsed.forEach((item) => {
-      addQuestion({ ...item, topic, image: '' })
+      addQuestion({ ...item, topic })
     })
     setSuccess(`${parsed.length} question(s) added to the bank!`)
     setParsed(null)
@@ -203,24 +208,23 @@ cognitive: understanding`
             {parsed.map((item, i) => (
               <div key={i} className="bg-gray-50 rounded-xl p-3 text-xs text-gray-700">
                 <p className="font-semibold mb-1">
-                  {i + 1}. {item.question}
+                  {i + 1}. {item.questionText}
                 </p>
-                {item.choices.map((c, ci) => {
-                  const letter = String.fromCharCode(65 + ci)
-                  const isAnswer = letter === item.answer
+                {['A','B','C','D'].map((letter) => {
+                  const isAnswer = letter === item.correctAnswer
                   return (
                     <p
-                      key={ci}
+                      key={letter}
                       className={`ml-3 ${isAnswer ? 'text-green-700 font-semibold' : ''}`}
                     >
-                      {letter}. {c || <span className="text-red-400 italic">missing</span>}
+                      {letter}. {item[`choice${letter}`] || <span className="text-red-400 italic">missing</span>}
                     </p>
                   )
                 })}
                 <p className="mt-1.5 text-gray-500">
                   Answer:{' '}
                   <span className="font-semibold text-green-700">
-                    {item.answer || <span className="text-red-500">none</span>}
+                    {item.correctAnswer || <span className="text-red-500">none</span>}
                   </span>{' '}
                   &middot;{' '}
                   {item.cognitiveLevel || (
